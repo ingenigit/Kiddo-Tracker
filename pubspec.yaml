@@ -1,0 +1,42 @@
+name: kiddo_tracker
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_timer_countdown: ^1.0.7
+  provider: ^6.1.5+1
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+assets:
+    - assets/images/kt_logo.png
+
+fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+
+# flutter_launcher_icons
+flutter_icons:
+  android: true
+  ios: true
+  min_sdk_android: 21
+  image_path: "assets/images/kt_logo.png"
+  remove_alpha_ios: true
+  remove_alpha_android: true
+  adaptive_icon_background: "#d4e9f7"
+  adaptive_icon_foreground: "assets/images/kt_logo.png"
