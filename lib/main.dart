@@ -1,12 +1,40 @@
 import 'package:flutter/material.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:kiddo_tracker/routes/routes.dart';
+import 'package:kiddo_tracker/widget/shareperference.dart';
+import 'package:kiddo_tracker/pages/mainscreen.dart';
+import 'package:kiddo_tracker/pages/loginscreen.dart';
 
+// final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+//     FlutterLocalNotificationsPlugin();
 void main() {
+  // WidgetsFlutterBinding.ensureInitialized();
+  // // Initialize notifications
+  // const AndroidInitializationSettings androidSettings =
+  //     AndroidInitializationSettings('@mipmap/ic_launcher');
+  // const InitializationSettings initSettings = InitializationSettings(
+  //   android: androidSettings,
+  // );
+
+  // await flutterLocalNotificationsPlugin.initialize(initSettings);
   runApp(const MainApp());
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends StatefulWidget {
   const MainApp({super.key});
+
+  @override
+  _MainAppState createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainApp> {
+  late Future<bool?> _isLoggedIn;
+
+  @override
+  void initState() {
+    super.initState();
+    _isLoggedIn = SharedPreferenceHelper.getUserLoggedIn();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,6 +44,20 @@ class MainApp extends StatelessWidget {
       darkTheme: ThemeData.dark(),
       initialRoute: AppRoutes.login,
       onGenerateRoute: AppRoutes.generateRoute,
+      home: FutureBuilder<bool?>(
+        future: _isLoggedIn,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          } else if (snapshot.hasData && snapshot.data == true) {
+            return const MainScreen(); // User is logged in
+          } else {
+            return const LoginScreen(); // User is not logged in
+          }
+        },
+      ),
     );
   }
 }
