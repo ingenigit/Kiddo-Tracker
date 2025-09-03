@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferenceHelper {
-  // Set a value
+  // logged in
   static Future<void> setUserLoggedIn(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool("loggedIn", value);
@@ -13,14 +13,14 @@ class SharedPreferenceHelper {
     return prefs.getBool("loggedIn");
   }
 
-  // Example for int
-  static Future<void> setIntValue(int value) async {
+  // user Number
+  static Future<void> setUserNumber(String value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt("", value);
+    await prefs.setString("userNumber", value);
   }
 
-  static Future<int?> getIntValue(String key) async {
+  static Future<String?> getUserNumber() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(key);
+    return prefs.getString("userNumber");
   }
 }

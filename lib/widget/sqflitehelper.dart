@@ -44,7 +44,6 @@ class SqfliteHelper {
     await db.execute('''
       CREATE TABLE child(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT,
       student_id TEXT,
       name TEXT,
       nickname TEXT,
@@ -56,7 +55,8 @@ class SqfliteHelper {
       tag_id TEXT,
       route_info TEXT,
       status INTEGER,
-      FOREIGN KEY(user_id) REFERENCES user(id) ON DELETE CASCADE
+      onboard_status INTEGER,
+      selected_plan TEXT
       )
     ''');
 
@@ -95,11 +95,7 @@ class SqfliteHelper {
 
   Future<List<Map<String, dynamic>>> getChildren(int userId) async {
     final dbClient = await db;
-    return await dbClient.query(
-      'child',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-    );
+    return await dbClient.query('child');
   }
 
   //update the child
@@ -108,7 +104,7 @@ class SqfliteHelper {
     return await dbClient.update(
       'child',
       child.toJson(),
-      where: 'id = ?',
+      where: 'student_id = ?',
       whereArgs: [child.student_id],
     );
   }

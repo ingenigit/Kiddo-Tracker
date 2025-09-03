@@ -3,7 +3,6 @@ import 'package:kiddo_tracker/pages/activityscreen.dart';
 import 'package:kiddo_tracker/pages/addchildscreen.dart';
 import 'package:kiddo_tracker/pages/homescreen.dart';
 import 'package:kiddo_tracker/pages/settingscreen.dart';
-import 'package:kiddo_tracker/routes/routes.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -33,7 +32,11 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Kiddo Tracker'), centerTitle: true),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Kiddo Tracker'),
+        centerTitle: true,
+      ),
       body: PageView(
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),

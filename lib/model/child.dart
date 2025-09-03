@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:kiddo_tracker/model/route.dart';
 
 class Child {
-  final String user_id;
   final String studentId;
   final String name;
   final String nickname;
@@ -14,9 +13,9 @@ class Child {
   final String tagId;
   final List<RouteInfo> routeInfo;
   final int status;
+  final int onboard_status;
 
   Child({
-    required this.user_id,
     required this.studentId,
     required this.name,
     required this.nickname,
@@ -28,6 +27,7 @@ class Child {
     required this.tagId,
     required this.routeInfo,
     required this.status,
+    required this.onboard_status,
   });
 
   factory Child.fromJson(Map<String, dynamic> json) {
@@ -58,7 +58,6 @@ class Child {
     }
 
     return Child(
-      user_id: json['user_id'] ?? '',
       studentId: json['student_id'] ?? '',
       name: json['name'] ?? '',
       nickname: json['nickname'] ?? '',
@@ -74,13 +73,15 @@ class Child {
       status: json['status'] is int
           ? json['status']
           : int.tryParse(json['status'].toString()) ?? 0,
+      onboard_status: json['onboard_status'] is int
+          ? json['onboard_status']
+          : int.tryParse(json['onboard_status'].toString()) ?? 0,
     );
   }
 
   get student_id => studentId;
 
   Map<String, dynamic> toJson() => {
-    'user_id': user_id,
     'student_id': studentId,
     'name': name,
     'nickname': nickname,
@@ -92,5 +93,6 @@ class Child {
     'tag_id': tagId,
     'route_info': jsonEncode(routeInfo.map((e) => e.toJson()).toList()),
     'status': status,
+    'onboard_status': onboard_status,
   };
 }
