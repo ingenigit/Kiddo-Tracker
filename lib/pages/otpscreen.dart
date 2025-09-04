@@ -41,6 +41,8 @@ class _OTPScreenState extends State<OTPScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('${widget.mobile} OTP: $otp')));
+    //use shared preferences to save mobile number
+    SharedPreferenceHelper.setUserNumber(widget.mobile ?? '');
     //using apiManager to verify otp and navigate to next screen on success
     String mobileNumber = widget.mobile ?? '';
 

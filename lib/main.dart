@@ -1,22 +1,14 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:kiddo_tracker/routes/routes.dart';
+import 'package:kiddo_tracker/services/notification_service.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
 import 'package:kiddo_tracker/pages/mainscreen.dart';
 import 'package:kiddo_tracker/pages/loginscreen.dart';
 
-// final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-//     FlutterLocalNotificationsPlugin();
-void main() {
-  // WidgetsFlutterBinding.ensureInitialized();
-  // // Initialize notifications
-  // const AndroidInitializationSettings androidSettings =
-  //     AndroidInitializationSettings('@mipmap/ic_launcher');
-  // const InitializationSettings initSettings = InitializationSettings(
-  //   android: androidSettings,
-  // );
-
-  // await flutterLocalNotificationsPlugin.initialize(initSettings);
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize notifications
+  await NotificationService.initialize();
   runApp(const MainApp());
 }
 

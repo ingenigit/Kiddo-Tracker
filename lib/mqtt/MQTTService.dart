@@ -1,3 +1,4 @@
+import 'package:logger/logger.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
@@ -9,6 +10,8 @@ class MQTTService {
   final Function(String) onConnectionStatusChanged;
   final Function(String) onLogMessage;
 
+  List<String> subscribedTopics = [];
+
   MQTTService({
     required this.onMessageReceived,
     required this.onConnectionStatusChanged,
@@ -17,11 +20,11 @@ class MQTTService {
 
   Future<void> connect() async {
     client = MqttServerClient.withPort(
-      'broker.emqx.io',
+      '172.105.52.11',
       'flutter_client_${DateTime.now().millisecondsSinceEpoch}',
       1883,
     );
-    
+
     client.logging(on: true);
     client.keepAlivePeriod = 60;
     client.autoReconnect = true;
@@ -51,8 +54,11 @@ class MQTTService {
       return;
     }
 
-    // Subscribe after successful connection
-    client.subscribe('test001', MqttQos.atLeastOnce);
+    // Subscribe to all topics after successful connection
+    for (var topic in subscribedTopics) {
+      Logger().i("/kiddotrac/" + topic);
+      client.subscribe("/kiddotrac/" + topic, MqttQos.atLeastOnce);
+    }
     onConnectionStatusChanged('Connected');
 
     client.updates!.listen((List<MqttReceivedMessage<MqttMessage?>>? c) {
@@ -60,14 +66,17 @@ class MQTTService {
       final String payload = MqttPublishPayload.bytesToStringAsString(
         recMessage.payload.message,
       );
-      
+
       onMessageReceived(payload);
       onLogMessage('Received message: $payload from topic: ${c[0].topic}');
     });
   }
 
   void onConnected() {
-    client.subscribe('test001', MqttQos.atLeastOnce);
+    // Subscribe to all topics on connection
+    for (var topic in subscribedTopics) {
+      client.subscribe("/kiddotrac/" + topic, MqttQos.atLeastOnce);
+    }
     onConnectionStatusChanged('Connected');
   }
 
@@ -101,5 +110,15 @@ class MQTTService {
 
   void disconnect() {
     client.disconnect();
+  }
+
+  void subscribeToTopics(List<String> topics) {
+    subscribedTopics = topics;
+    if (client.connectionStatus?.state == MqttConnectionState.connected) {
+      for (var topic in topics) {
+        client.subscribe("/kiddotrac/" + topic, MqttQos.atLeastOnce);
+        onLogMessage('Subscribed to topic: $topic');
+      }
+    }
   }
 }
