@@ -35,6 +35,9 @@ class _HomeScreenState extends State<HomeScreen>
   late MQTTService _mqttService;
   String _mqttStatus = 'Disconnected';
 
+  // Map to track active status of routes by routeId_oprid key
+  Map<String, bool> activeRoutes = {};
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
                                           routes.cast<RouteInfo>(),
                                         ),
                                     onAddRouteTap: () => _onAddRoute(child),
+                                    activeRoutes: activeRoutes,
                                   )
                                   .animate()
                                   .fade(duration: 600.ms)
@@ -202,9 +206,7 @@ class _HomeScreenState extends State<HomeScreen>
           children.add(child);
           //store routeInfo data
           allParsedRouteInfo.addAll(parsedRouteInfo);
-          Logger().i(
-            "${child.toJson()} $parsedRouteInfo",
-          );
+          Logger().i("${child.toJson()} $parsedRouteInfo");
         }
 
         // Subscribe to topics based on student_ids
@@ -300,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen>
       } else if (msgtype == 3) {
         // Offboard message
         final List<dynamic>? offlist = data['offlist'] as List<dynamic>?;
-  
+
         if (offlist != null) {
           for (var id in offlist) {
             if (id is String) {
@@ -309,6 +311,33 @@ class _HomeScreenState extends State<HomeScreen>
           }
         } else {
           Logger().w('Missing offlist in offboard message');
+        }
+      } else if (msgtype == 1 || msgtype == 4) {
+        String devid = jsonMessage['devid'] ?? '';
+        if (devid.isNotEmpty) {
+          setState(() {
+            for (var child in children) {
+              for (var route in child.routeInfo) {
+                String key = '${route.routeId}_${route.oprid}';
+                if (key == devid) {
+                  //also push notification
+                  NotificationService.showNotification(
+                    id: 0,
+                    title: 'KT Status Update',
+                    body:
+                        'Bus ${route.routeName} has been ${msgtype == 1 ? 'activated' : 'deactivated'}.',
+                  );
+                  if (msgtype == 1) {
+                    activeRoutes[key] = true;
+                  } else if (msgtype == 4) {
+                    activeRoutes[key] = false;
+                  }
+                }
+              }
+            }
+          });
+        } else {
+          Logger().w('Missing devid in bus active/inactive message');
         }
       } else {
         Logger().w('Unknown msgtype: $msgtype');

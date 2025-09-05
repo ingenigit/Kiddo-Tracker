@@ -6,6 +6,7 @@ class RouteCardWidget extends StatelessWidget {
   final List<RouteInfo> routes;
   final Function(String routeId, List<RouteInfo> routes)? onOnboardTap;
   final Function(String routeId, List<RouteInfo> routes)? onOffboardTap;
+  final Map<String, bool> activeRoutes;
 
   const RouteCardWidget({
     super.key,
@@ -13,6 +14,7 @@ class RouteCardWidget extends StatelessWidget {
     required this.routes,
     this.onOnboardTap,
     this.onOffboardTap,
+    required this.activeRoutes,
   });
 
   @override
@@ -81,14 +83,25 @@ class RouteCardWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
+            Icon(
               Icons.directions_bus_outlined,
               size: 30,
-              color: Colors.grey,
+              color: _getBusIconColor(),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Color _getBusIconColor() {
+    // Check if any route in the list is active
+    for (var route in routes) {
+      String key = '${route.routeId}_${route.oprid}';
+      if (activeRoutes[key] == true) {
+        return Colors.green; // Active
+      }
+    }
+    return Colors.red; // Inactive or default
   }
 }

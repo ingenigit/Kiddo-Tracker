@@ -12,6 +12,7 @@ class ChildCardWidget extends StatelessWidget {
   final VoidCallback? onAddRouteTap;
   final Function(String routeId, List<RouteInfo> routes)? onOnboardTap;
   final Function(String routeId, List<RouteInfo> routes)? onOffboardTap;
+  final Map<String, bool> activeRoutes;
 
   const ChildCardWidget({
     super.key,
@@ -21,6 +22,7 @@ class ChildCardWidget extends StatelessWidget {
     this.onAddRouteTap,
     this.onOnboardTap,
     this.onOffboardTap,
+    required this.activeRoutes,
   });
 
   String _statusText(int status) {
@@ -151,6 +153,7 @@ class ChildCardWidget extends StatelessWidget {
                   routes: routes,
                   onOnboardTap: onOnboardTap,
                   onOffboardTap: onOffboardTap,
+                  activeRoutes: activeRoutes,
                 );
               }).toList(),
             ),
