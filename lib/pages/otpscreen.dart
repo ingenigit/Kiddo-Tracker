@@ -1,12 +1,7 @@
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:kiddo_tracker/api/apimanage.dart';
-import 'package:kiddo_tracker/model/child.dart';
-import 'package:kiddo_tracker/model/parent.dart';
-import 'package:kiddo_tracker/model/route.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
-import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:logger/logger.dart';
 
 import '../routes/routes.dart';

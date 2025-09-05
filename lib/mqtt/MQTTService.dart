@@ -56,8 +56,8 @@ class MQTTService {
 
     // Subscribe to all topics after successful connection
     for (var topic in subscribedTopics) {
-      Logger().i("/kiddotrac/" + topic);
-      client.subscribe("/kiddotrac/" + topic, MqttQos.atLeastOnce);
+      Logger().i("/kiddotrac/$topic");
+      client.subscribe("/kiddotrac/$topic", MqttQos.atLeastOnce);
     }
     onConnectionStatusChanged('Connected');
 
@@ -75,7 +75,7 @@ class MQTTService {
   void onConnected() {
     // Subscribe to all topics on connection
     for (var topic in subscribedTopics) {
-      client.subscribe("/kiddotrac/" + topic, MqttQos.atLeastOnce);
+      client.subscribe("/kiddotrac/$topic", MqttQos.atLeastOnce);
     }
     onConnectionStatusChanged('Connected');
   }
@@ -116,7 +116,7 @@ class MQTTService {
     subscribedTopics = topics;
     if (client.connectionStatus?.state == MqttConnectionState.connected) {
       for (var topic in topics) {
-        client.subscribe("/kiddotrac/" + topic, MqttQos.atLeastOnce);
+        client.subscribe("/kiddotrac/$topic", MqttQos.atLeastOnce);
         onLogMessage('Subscribed to topic: $topic');
       }
     }

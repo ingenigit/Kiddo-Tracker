@@ -9,8 +9,9 @@ import 'package:kiddo_tracker/model/route.dart';
 import 'package:kiddo_tracker/model/subscribe.dart';
 import 'package:kiddo_tracker/mqtt/MQTTService.dart';
 import 'package:kiddo_tracker/services/notification_service.dart';
+import 'package:kiddo_tracker/widget/child_card_widget.dart';
+import 'package:kiddo_tracker/widget/mqtt_status_widget.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
-import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:logger/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -53,28 +54,6 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
-  String _statusText(int status) {
-    switch (status) {
-      case 1:
-        return 'Onboard';
-      case 2:
-        return 'Offboard';
-      default:
-        return 'Offboard';
-    }
-  }
-
-  Map<String, List<RouteInfo>> _groupRoutesByRouteId(List<RouteInfo> routes) {
-    Map<String, List<RouteInfo>> grouped = {};
-    for (var route in routes) {
-      if (!grouped.containsKey(route.routeId)) {
-        grouped[route.routeId] = [];
-      }
-      grouped[route.routeId]!.add(route);
-    }
-    return grouped;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,40 +64,7 @@ class _HomeScreenState extends State<HomeScreen>
             : Column(
                 children: [
                   // MQTT Status Indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    color: _mqttStatus == 'Connected'
-                        ? Colors.green.shade100
-                        : Colors.red.shade100,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _mqttStatus == 'Connected'
-                              ? Icons.wifi
-                              : Icons.wifi_off,
-                          size: 16,
-                          color: _mqttStatus == 'Connected'
-                              ? Colors.green
-                              : Colors.red,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'MQTT: $_mqttStatus',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _mqttStatus == 'Connected'
-                                ? Colors.green.shade800
-                                : Colors.red.shade800,
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  MqttStatusWidget(mqttStatus: _mqttStatus),
                   Expanded(
                     child: children.isEmpty
                         ? const Center(
@@ -135,268 +81,26 @@ class _HomeScreenState extends State<HomeScreen>
                             itemCount: children.length,
                             itemBuilder: (context, index) {
                               final child = children[index];
-                              final groupedRoutes = _groupRoutesByRouteId(
-                                child.routeInfo,
-                              );
-
-                              return Card(
-                                elevation: 4,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Top row: Name, status, location icon
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            child.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
-                                              fontFamily: 'Poppins',
-                                            ),
-                                          ),
-                                          Row(
-                                            children: [
-                                              Builder(
-                                                builder: (context) {
-                                                  var sub =
-                                                      studentSubscriptions[child
-                                                          .studentId];
-                                                  Logger().i(sub);
-                                                  //if sub is null make it subscribe else show status
-                                                  if (sub == null) {
-                                                    return GestureDetector(
-                                                      onTap: () {
-                                                        print(
-                                                          'Subscribe clicked for ${child.name}',
-                                                        );
-                                                      },
-                                                      child: Text(
-                                                        "Subscribe",
-                                                        style: const TextStyle(
-                                                          color: Colors.blue,
-                                                          fontSize: 14,
-                                                          fontFamily: 'Poppins',
-                                                          decoration:
-                                                              TextDecoration
-                                                                  .underline,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  } else {
-                                                    //check if sub is expired
-                                                    bool isExpired =
-                                                        DateTime.parse(
-                                                          sub.enddate,
-                                                        ).isBefore(
-                                                          DateTime.now(),
-                                                        );
-                                                    if (isExpired) {
-                                                      return GestureDetector(
-                                                        onTap: () {
-                                                          print(
-                                                            'Subscribe clicked for ${child.name}',
-                                                          );
-                                                        },
-                                                        child: Text(
-                                                          "Subscribe",
-                                                          style: const TextStyle(
-                                                            color: Colors.blue,
-                                                            fontSize: 14,
-                                                            fontFamily:
-                                                                'Poppins',
-                                                            decoration:
-                                                                TextDecoration
-                                                                    .underline,
-                                                          ),
-                                                        ),
-                                                      );
-                                                    } else {
-                                                      return Text(
-                                                        _statusText(
-                                                          child.status,
-                                                        ),
-                                                        style: const TextStyle(
-                                                          color: Colors.grey,
-                                                          fontSize: 14,
-                                                          fontFamily: 'Poppins',
-                                                        ),
-                                                      );
-                                                    }
-                                                  }
-                                                },
-                                              ),
-                                              const SizedBox(width: 4),
-                                              const Icon(
-                                                Icons.location_on_outlined,
-                                                size: 18,
-                                                color: Colors.grey,
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      // Unit info
-                                      Text(
-                                        child.school,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey,
-                                          fontFamily: 'Poppins',
+                              return ChildCardWidget(
+                                    child: child,
+                                    subscription:
+                                        studentSubscriptions[child.studentId],
+                                    onSubscribeTap: () => _onSubscribe(child),
+                                    onOnboardTap: (routeId, routes) =>
+                                        _onOnboard(
+                                          routeId,
+                                          routes.cast<RouteInfo>(),
                                         ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      // Route cards
-                                      Column(
-                                        children: groupedRoutes.entries.map((
-                                          entry,
-                                        ) {
-                                          final routeId = entry.key;
-                                          final routes = entry.value;
-
-                                          // Find earliest stopArrivalTime for route start time
-                                          String startTime = '';
-                                          if (routes.isNotEmpty) {
-                                            routes.sort(
-                                              (a, b) => a.stopArrivalTime
-                                                  .compareTo(b.stopArrivalTime),
-                                            );
-                                            startTime =
-                                                routes.first.stopArrivalTime;
-                                          }
-
-                                          // Find onboard and offboard stops (assuming stopName contains 'Onboard' or 'Offboard')
-                                          String onboardTime = '_';
-                                          String offboardTime = '_';
-                                          for (var r in routes) {
-                                            if (r.stopName
-                                                .toLowerCase()
-                                                .contains('onboard')) {
-                                              onboardTime = r.stopArrivalTime;
-                                            } else if (r.stopName
-                                                .toLowerCase()
-                                                .contains('offboard')) {
-                                              offboardTime = r.stopArrivalTime;
-                                            }
-                                          }
-
-                                          return Card(
-                                            margin: const EdgeInsets.symmetric(
-                                              vertical: 6,
-                                            ),
-                                            child: Padding(
-                                              padding: const EdgeInsets.all(
-                                                12.0,
-                                              ),
-                                              child: Row(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                          '${routes.first.routeName} starts at $startTime',
-                                                          style:
-                                                              const TextStyle(
-                                                                fontSize: 14,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                                fontFamily:
-                                                                    'Poppins',
-                                                              ),
-                                                        ),
-                                                        const SizedBox(
-                                                          height: 6,
-                                                        ),
-                                                        GestureDetector(
-                                                          onTap: () {
-                                                            // TODO: Implement onboard time action
-                                                          },
-                                                          child: Text(
-                                                            'Onboard at $onboardTime',
-                                                            style: const TextStyle(
-                                                              color:
-                                                                  Colors.blue,
-                                                              decoration:
-                                                                  TextDecoration
-                                                                      .underline,
-                                                              fontFamily:
-                                                                  'Poppins',
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        GestureDetector(
-                                                          onTap: () {
-                                                            // TODO: Implement offboard time action
-                                                          },
-                                                          child: Text(
-                                                            'Offboard at $offboardTime',
-                                                            style: const TextStyle(
-                                                              color:
-                                                                  Colors.blue,
-                                                              decoration:
-                                                                  TextDecoration
-                                                                      .underline,
-                                                              fontFamily:
-                                                                  'Poppins',
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  const Icon(
-                                                    Icons
-                                                        .directions_bus_outlined,
-                                                    size: 30,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      // Add Route button
-                                      Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            // TODO: Implement add route action
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.lightBlue,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'Add Route',
-                                            style: TextStyle(
-                                              fontFamily: 'Poppins',
-                                            ),
-                                          ),
+                                    onOffboardTap: (routeId, routes) =>
+                                        _onOffboard(
+                                          routeId,
+                                          routes.cast<RouteInfo>(),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ).animate().fade(duration: 600.ms).slide(begin: const Offset(0, 0.1));
+                                    onAddRouteTap: () => _onAddRoute(child),
+                                  )
+                                  .animate()
+                                  .fade(duration: 600.ms)
+                                  .slide(begin: const Offset(0, 0.1));
                             },
                           ),
                   ),
@@ -447,6 +151,7 @@ class _HomeScreenState extends State<HomeScreen>
         );
 
         //////////////////////////////////////////////////////////////
+        List<RouteInfo> allParsedRouteInfo = [];
         for (var student in studentInfo) {
           Logger().i(student.toString());
           List<RouteInfo> parsedRouteInfo = [];
@@ -495,11 +200,21 @@ class _HomeScreenState extends State<HomeScreen>
           );
           //store children data
           children.add(child);
-          Logger().i(child.toJson().toString());
+          //store routeInfo data
+          allParsedRouteInfo.addAll(parsedRouteInfo);
+          Logger().i(
+            "${child.toJson()} $parsedRouteInfo",
+          );
         }
 
         // Subscribe to topics based on student_ids
         List<String> topics = children.map((child) => child.studentId).toList();
+        // Subscribe to topics based on routeInfo's routeId + oprid
+        topics.addAll(
+          allParsedRouteInfo
+              .map((route) => '${route.routeId}/${route.oprid}')
+              .toList(),
+        );
         _mqttService.subscribeToTopics(topics);
       }
       setState(() {
@@ -564,12 +279,80 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _onMQTTMessageReceived(String message) {
-    //push local notification
-    NotificationService.showNotification(
-      id: 0,
-      title: 'MQTT Message',
-      body: message,
+    try {
+      // Parse the MQTT message JSON
+      final Map<String, dynamic> jsonMessage = jsonDecode(message);
+
+      final Map<String, dynamic> data =
+          jsonMessage['data'] as Map<String, dynamic>;
+      final int? msgtype = data['msgtype'] as int?;
+
+      if (msgtype == 2) {
+        // Onboard message
+        final String? studentId = data['studentid'] as String?;
+        final int status = data['status'] as int? ?? 1; // Default to onboard
+
+        if (studentId != null) {
+          _updateChildStatus(studentId, status);
+        } else {
+          Logger().w('Missing studentid in onboard message');
+        }
+      } else if (msgtype == 3) {
+        // Offboard message
+        final List<dynamic>? offlist = data['offlist'] as List<dynamic>?;
+  
+        if (offlist != null) {
+          for (var id in offlist) {
+            if (id is String) {
+              _updateChildStatus(id, 2); // Offboard status
+            }
+          }
+        } else {
+          Logger().w('Missing offlist in offboard message');
+        }
+      } else {
+        Logger().w('Unknown msgtype: $msgtype');
+      }
+    } catch (e) {
+      Logger().e('Error parsing MQTT message: $e');
+    }
+  }
+
+  void _updateChildStatus(String studentId, int status) {
+    final childIndex = children.indexWhere(
+      (child) => child.studentId == studentId,
     );
+    if (childIndex != -1) {
+      // Show a notification
+      NotificationService.showNotification(
+        id: 0,
+        title: 'KT Status Update',
+        body:
+            'Child ${children[childIndex].name} has been ${status == 1 ? 'onboarded' : 'offboarded'}.',
+      );
+
+      // Update the status of the child
+      Logger().i('Updating status for child $studentId to $status');
+      setState(() {
+        children[childIndex] = Child(
+          studentId: children[childIndex].studentId,
+          name: children[childIndex].name,
+          nickname: children[childIndex].nickname,
+          school: children[childIndex].school,
+          class_name: children[childIndex].class_name,
+          rollno: children[childIndex].rollno,
+          age: children[childIndex].age,
+          gender: children[childIndex].gender,
+          tagId: children[childIndex].tagId,
+          routeInfo: children[childIndex].routeInfo,
+          status: children[childIndex].status,
+          onboard_status: status, //children[childIndex].onboard_status,
+        );
+      });
+      Logger().i('Updated status for child $studentId to $status');
+    } else {
+      Logger().w('Child with studentId $studentId not found');
+    }
   }
 
   void _onMQTTStatusChanged(String status) {
@@ -598,5 +381,30 @@ class _HomeScreenState extends State<HomeScreen>
     } else if (status.isPermanentlyDenied) {
       // Permission permanently denied
     }
+  }
+
+  // Action methods
+  void _onSubscribe(Child child) {
+    // Implement subscribe action
+    Logger().i('Subscribe clicked for ${child.name}');
+    // Add your subscription logic here
+  }
+
+  void _onOnboard(String routeId, List<RouteInfo> routes) {
+    // Implement onboard action
+    Logger().i('Onboard clicked for route $routeId');
+    // Add your onboard logic here
+  }
+
+  void _onOffboard(String routeId, List<RouteInfo> routes) {
+    // Implement offboard action
+    Logger().i('Offboard clicked for route $routeId');
+    // Add your offboard logic here
+  }
+
+  void _onAddRoute(Child child) {
+    // Implement add route action
+    Logger().i('Add route clicked for ${child.name}');
+    // Add your add route logic here
   }
 }
