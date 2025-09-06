@@ -8,6 +8,7 @@ import 'package:kiddo_tracker/model/parent.dart';
 import 'package:kiddo_tracker/model/route.dart';
 import 'package:kiddo_tracker/model/subscribe.dart';
 import 'package:kiddo_tracker/mqtt/MQTTService.dart';
+import 'package:kiddo_tracker/routes/routes.dart';
 import 'package:kiddo_tracker/services/notification_service.dart';
 import 'package:kiddo_tracker/widget/child_card_widget.dart';
 import 'package:kiddo_tracker/widget/mqtt_status_widget.dart';
@@ -23,11 +24,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   List<Child> children = [];
   List<SubscriptionPlan> subscriptionPlans = [];
   Map<String, SubscriptionPlan> studentSubscriptions = {};
   bool _isLoading = true;
+
+  bool _hasInitialized = false;
 
   late final AnimationController _controller;
   late final Animation<double> _animation;
@@ -35,14 +38,20 @@ class _HomeScreenState extends State<HomeScreen>
   late MQTTService _mqttService;
   String _mqttStatus = 'Disconnected';
 
-  // Map to track active status of routes by routeId_oprid key
   Map<String, bool> activeRoutes = {};
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _fetchChildren();
-    _initializeMQTT();
+    if (!_hasInitialized) {
+      _fetchChildren();
+      _initializeMQTT();
+      _hasInitialized = true;
+    }
+
     _controller = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -115,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _fetchChildren() async {
+    Logger().i('Fetching children...');
     try {
       //get from shared preferences
       final String? userId = await SharedPreferenceHelper.getUserNumber();
@@ -146,7 +156,8 @@ class _HomeScreenState extends State<HomeScreen>
           sessionid: userInfo[0]['sessionid'],
         );
         Logger().i(parent.toJson().toString());
-
+        //store session data
+        SharedPreferenceHelper.setUserSessionId(userInfo[0]['sessionid']);
         // Fetch subscription data
         await _fetchAndSetSubscriptionPlans(
           userInfo[0]['userid'],
@@ -417,6 +428,7 @@ class _HomeScreenState extends State<HomeScreen>
     // Implement subscribe action
     Logger().i('Subscribe clicked for ${child.name}');
     // Add your subscription logic here
+    Navigator.pushNamed(context, AppRoutes.subscribe);
   }
 
   void _onOnboard(String routeId, List<RouteInfo> routes) {
@@ -435,5 +447,6 @@ class _HomeScreenState extends State<HomeScreen>
     // Implement add route action
     Logger().i('Add route clicked for ${child.name}');
     // Add your add route logic here
+    Navigator.pushNamed(context, AppRoutes.addRoute, arguments: child.nickname);
   }
 }

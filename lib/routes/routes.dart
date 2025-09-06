@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:kiddo_tracker/pages/addchildroute.dart';
 import 'package:kiddo_tracker/pages/loginscreen.dart';
 import 'package:kiddo_tracker/pages/mainscreen.dart';
 import 'package:kiddo_tracker/pages/otpscreen.dart';
 import 'package:kiddo_tracker/pages/signupscreen.dart';
+import 'package:kiddo_tracker/pages/subscriptionscreen.dart';
 
 class AppRoutes {
   static const String login = '/';
   static const String otp = '/otp';
   static const String signup = '/signup';
   static const String main = '/main';
-  // static const String home = '/home';
-  // static const String child = '/child';
-  // static const String setting = '/settings';
-  // static const String activities = '/activities';
-  // static const String alerts = '/alerts';
+  static const String subscribe = '/subscribe';
+  static const String addRoute = '/addroute';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -28,14 +27,13 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const SignUpScreen());
       case main:
         return MaterialPageRoute(builder: (_) => const MainScreen());
-      // case home:
-      //   return MaterialPageRoute(builder: (_) => const HomeScreen());
-      // case child:
-      //   return MaterialPageRoute(builder: (_) => const AddChildScreen());
-      // case activities:
-      //   return MaterialPageRoute(builder: (_) => const ActivityScreen());
-      // case setting:
-      //   return MaterialPageRoute(builder: (_) => const SettingScreen());
+      case subscribe:
+        return MaterialPageRoute(builder: (_) => const SubscriptionScreen());
+      case addRoute:
+        final childName = settings.arguments as String;
+        return MaterialPageRoute(
+          builder: (_) => AddChildRoutePage(nickName: childName),
+        );
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
@@ -51,10 +49,8 @@ class AppRoutes {
       otp: (context) => OTPScreen(),
       signup: (context) => const SignUpScreen(),
       main: (context) => const MainScreen(),
-      // home: (context) => const HomeScreen(),
-      // child: (context) => const AddChildScreen(),
-      // activities: (context) => const ActivityScreen(),
-      // setting: (context) => const SettingScreen(),
+      subscribe: (context) => const SubscriptionScreen(),
+      addRoute: (context) => AddChildRoutePage(),
     };
   }
 }

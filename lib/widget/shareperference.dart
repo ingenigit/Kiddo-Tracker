@@ -23,4 +23,15 @@ class SharedPreferenceHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString("userNumber");
   }
+
+  //user session id
+  static Future<void> setUserSessionId(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString("userSessionId", value);
+  }
+
+  static Future<String?> getUserSessionId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString("userSessionId");
+  }
 }
