@@ -70,6 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         controller: _mobileController,
                         keyboardType: TextInputType.phone,
+                        maxLength: 10,
                         decoration: InputDecoration(
                           labelText: 'Phone Number',
                           labelStyle: const TextStyle(
@@ -123,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               Navigator.pushNamed(
                                 context,
                                 AppRoutes.otp,
-                                arguments: "8456029772",
+                                arguments: _mobileController.text,
                               );
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -186,57 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 20),
-
-                // Additional Options
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Don\'t have an account?',
-                      style: TextStyle(
-                        color: Color(0xFF837E93),
-                        fontSize: 14,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        // Navigate to sign up
-                      },
-                      child: const Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          color: Color(0xFF755DC1),
-                          fontSize: 14,
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 15),
-
-                GestureDetector(
-                  onTap: () {
-                    // Handle forgot password
-                  },
-                  child: const Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      color: Color(0xFF755DC1),
-                      fontSize: 14,
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
               ],
             ),
           ),

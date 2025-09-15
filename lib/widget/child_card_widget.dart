@@ -4,15 +4,18 @@ import 'package:kiddo_tracker/model/child.dart';
 import 'package:kiddo_tracker/model/subscribe.dart';
 import 'package:kiddo_tracker/widget/route_card_widget.dart';
 import 'package:kiddo_tracker/model/route.dart';
+import 'package:logger/logger.dart';
 
 class ChildCardWidget extends StatelessWidget {
   final Child child;
   final SubscriptionPlan? subscription;
   final VoidCallback? onSubscribeTap;
   final VoidCallback? onAddRouteTap;
-  final Function(String routeId, List<RouteInfo> routes)? onOnboardTap;
-  final Function(String routeId, List<RouteInfo> routes)? onOffboardTap;
+  final Function(String routeId, List<RouteInfo> routes)? onBusTap;
+  final Function(String routeId, List<RouteInfo> routes)? onLocationTap;
+  final Function(String routeId, List<RouteInfo> routes)? onDeleteTap;
   final Map<String, bool> activeRoutes;
+  final int boardRefreshKey;
 
   const ChildCardWidget({
     super.key,
@@ -20,9 +23,11 @@ class ChildCardWidget extends StatelessWidget {
     this.subscription,
     this.onSubscribeTap,
     this.onAddRouteTap,
-    this.onOnboardTap,
-    this.onOffboardTap,
+    required this.onBusTap,
+    required this.onLocationTap,
+    required this.onDeleteTap,
     required this.activeRoutes,
+    required this.boardRefreshKey,
   });
 
   String _statusText(int status) {
@@ -89,15 +94,15 @@ class ChildCardWidget extends StatelessWidget {
                             ),
                           );
                         } else {
-                          // Check if expired
                           bool isExpired = DateTime.parse(
                             subscription!.enddate,
                           ).isBefore(DateTime.now());
-                          if (isExpired) {
+                          Logger().i(isExpired);
+                          if (subscription!.student_id != child.studentId) {
                             return GestureDetector(
                               onTap: onSubscribeTap,
                               child: const Text(
-                                "Subscribe",
+                                "Subscribess",
                                 style: TextStyle(
                                   color: Colors.blue,
                                   fontSize: 14,
@@ -106,7 +111,33 @@ class ChildCardWidget extends StatelessWidget {
                                 ),
                               ),
                             );
-                          } else {
+                          } else if (isExpired) {
+                            return GestureDetector(
+                              onTap: onSubscribeTap,
+                              child: const Text(
+                                "Add New Plan",
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: 14,
+                                  fontFamily: 'Poppins',
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            );
+                          } else if (subscription!.student_id == child.studentId && child.status == 0) {
+                            return GestureDetector(
+                              child: const Text(
+                                "Plan Selected",
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 14,
+                                  fontFamily: 'Poppins',
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            );
+                          }
+                          else {
                             return Text(
                               _statusText(child.onboard_status),
                               style: TextStyle(
@@ -121,12 +152,6 @@ class ChildCardWidget extends StatelessWidget {
                           }
                         }
                       },
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 18,
-                      color: Colors.grey,
                     ),
                   ],
                 ),
@@ -149,11 +174,14 @@ class ChildCardWidget extends StatelessWidget {
                 final routeId = entry.key;
                 final routes = entry.value;
                 return RouteCardWidget(
+                  childId: child.studentId,
                   routeId: routeId,
                   routes: routes,
-                  onOnboardTap: onOnboardTap,
-                  onOffboardTap: onOffboardTap,
+                  onBusTap: onBusTap,
+                  onLocationTap: onLocationTap,
+                  onDeleteTap: onDeleteTap,
                   activeRoutes: activeRoutes,
+                  boardRefreshKey: boardRefreshKey,
                 );
               }).toList(),
             ),

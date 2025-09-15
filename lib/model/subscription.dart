@@ -1,14 +1,14 @@
 class SubscriptionPackage {
 
-  final int plainid;
+  final int planid;
   final String plan_name;
   final String plan_details;
   final int validity;
-  final double price;
-  final int status; 
+  final int price;
+  final int status;
 
   SubscriptionPackage({
-    required this.plainid,
+    required this.planid,
     required this.plan_name,
     required this.plan_details,
     required this.validity,
@@ -18,17 +18,17 @@ class SubscriptionPackage {
 
   factory SubscriptionPackage.fromJson(Map<String, dynamic> json) {
     return SubscriptionPackage(
-      plainid: json['plainid'] as int,
+      planid: json['planid'] as int,
       plan_name: json['plan_name'] as String,
       plan_details: json['plan_details'] as String,
       validity: json['validity'] as int,
-      price: json['price'] as double,
+      price: json['price'] as int,
       status: json['status'] as int,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'plainid': plainid,
+    'planid': planid,
     'plan_name': plan_name,
     'plan_details': plan_details,
     'validity': validity,

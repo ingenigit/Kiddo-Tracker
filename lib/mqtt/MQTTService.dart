@@ -121,4 +121,12 @@ class MQTTService {
       }
     }
   }
+
+  //unsubscribe to all it has
+  void unsubscribeFromAllTopics() {
+    for (var topic in subscribedTopics) {
+      client.unsubscribe("/kiddotrac/$topic");
+      onLogMessage('Unsubscribed from topic: $topic');
+    }
+  }
 }

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:kiddo_tracker/api/apimanage.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
@@ -40,33 +39,32 @@ class _OTPScreenState extends State<OTPScreen> {
     SharedPreferenceHelper.setUserNumber(widget.mobile ?? '');
     //using apiManager to verify otp and navigate to next screen on success
     String mobileNumber = widget.mobile ?? '';
-
-    //   apiManager
-    //       .post(
-    //         'ktrackuserverifyotp/',
-    //         data: {'mobile': mobileNumber, 'otpval': otp},
-    //       )
-    //       .then((response) {
-    //         if (response.statusCode == 200) {
-    //           logger.i(response.toString());
-    //           if (response.data[0]['result'] == 'ok') {
-    //             // print response
-    //             print(response.toString()); n
-    //             // Success animation before navigation
-    Navigator.pushNamed(context, AppRoutes.main);
-    //           } else {
-    //             ScaffoldMessenger.of(context).showSnackBar(
-    //               SnackBar(content: Text('Error: ${response.data['message']}')),
-    //             );
-    //           }
-    //         } else {
-    //           ScaffoldMessenger.of(context).showSnackBar(
-    //             SnackBar(
-    //               content: Text('Failed to send OTP: ${response.statusMessage}'),
-    //             ),
-    //           );
-    //         }
-    //       });
+    apiManager
+        .post(
+          'ktrackuserverifyotp/',
+          data: {'mobile': mobileNumber, 'otpval': otp},
+        )
+        .then((response) {
+          if (response.statusCode == 200) {
+            logger.i(response.toString());
+            if (response.data[0]['result'] == 'ok') {
+              // print response
+              print(response.toString());
+              // Success animation before navigation
+              Navigator.pushNamed(context, AppRoutes.main);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error: ${response.data['message']}')),
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to send OTP: ${response.statusMessage}'),
+              ),
+            );
+          }
+        });
   }
 
   @override

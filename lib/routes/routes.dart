@@ -28,11 +28,15 @@ class AppRoutes {
       case main:
         return MaterialPageRoute(builder: (_) => const MainScreen());
       case subscribe:
-        return MaterialPageRoute(builder: (_) => const SubscriptionScreen());
+        final childId = settings.arguments as String;
+        return MaterialPageRoute(builder: (_) => SubscriptionScreen(childid: childId,));
       case addRoute:
-        final childName = settings.arguments as String;
+        final arguments = settings.arguments as Map;
+        final childName = arguments['childName'];
+        final childId = arguments['childId'];
         return MaterialPageRoute(
-          builder: (_) => AddChildRoutePage(nickName: childName),
+          builder: (_) =>
+              AddChildRoutePage(nickName: childName, stdId: childId),
         );
       default:
         return MaterialPageRoute(

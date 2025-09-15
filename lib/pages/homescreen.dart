@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -9,10 +10,13 @@ import 'package:kiddo_tracker/model/route.dart';
 import 'package:kiddo_tracker/model/subscribe.dart';
 import 'package:kiddo_tracker/mqtt/MQTTService.dart';
 import 'package:kiddo_tracker/routes/routes.dart';
+import 'package:kiddo_tracker/services/global_event.dart';
 import 'package:kiddo_tracker/services/notification_service.dart';
 import 'package:kiddo_tracker/widget/child_card_widget.dart';
+import 'package:kiddo_tracker/widget/location_and_route_dialog.dart';
 import 'package:kiddo_tracker/widget/mqtt_status_widget.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
+import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:logger/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -29,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen>
   List<SubscriptionPlan> subscriptionPlans = [];
   Map<String, SubscriptionPlan> studentSubscriptions = {};
   bool _isLoading = true;
+  final SqfliteHelper _sqfliteHelper = SqfliteHelper();
 
   bool _hasInitialized = false;
 
@@ -39,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen>
   String _mqttStatus = 'Disconnected';
 
   Map<String, bool> activeRoutes = {};
+  int _boardRefreshKey = 0;
+  late StreamSubscription<String> _streamSubscription;
 
   @override
   bool get wantKeepAlive => true;
@@ -47,8 +54,8 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     if (!_hasInitialized) {
-      _fetchChildren();
       _initializeMQTT();
+      _fetchChildren();
       _hasInitialized = true;
     }
 
@@ -58,10 +65,20 @@ class _HomeScreenState extends State<HomeScreen>
     );
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+
+    _streamSubscription = GlobalEvent().eventStream.listen((event) {
+      if (event == 'childDeleted') {
+        setState(() {
+          _isLoading = true;
+        });
+        _fetchChildren();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _streamSubscription.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -98,18 +115,19 @@ class _HomeScreenState extends State<HomeScreen>
                                     subscription:
                                         studentSubscriptions[child.studentId],
                                     onSubscribeTap: () => _onSubscribe(child),
-                                    onOnboardTap: (routeId, routes) =>
-                                        _onOnboard(
+                                    onBusTap: (routeId, routes) =>
+                                        _onBusTap(routeId, routes),
+                                    onLocationTap: (routeId, routes) =>
+                                        _onLocationTap(routeId, routes),
+                                    onDeleteTap: (routeId, routes) =>
+                                        _onDeleteTap(
                                           routeId,
-                                          routes.cast<RouteInfo>(),
-                                        ),
-                                    onOffboardTap: (routeId, routes) =>
-                                        _onOffboard(
-                                          routeId,
-                                          routes.cast<RouteInfo>(),
+                                          routes,
+                                          child.studentId,
                                         ),
                                     onAddRouteTap: () => _onAddRoute(child),
                                     activeRoutes: activeRoutes,
+                                    boardRefreshKey: _boardRefreshKey,
                                   )
                                   .animate()
                                   .fade(duration: 600.ms)
@@ -126,6 +144,14 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _fetchChildren() async {
     Logger().i('Fetching children...');
     try {
+      // Clear old data
+      children.clear();
+      subscriptionPlans.clear();
+      studentSubscriptions.clear();
+      activeRoutes.clear();
+      // Unsubscribe from old MQTT topics if any
+      _mqttService.unsubscribeFromAllTopics();
+
       //get from shared preferences
       final String? userId = await SharedPreferenceHelper.getUserNumber();
 
@@ -156,6 +182,10 @@ class _HomeScreenState extends State<HomeScreen>
           sessionid: userInfo[0]['sessionid'],
         );
         Logger().i(parent.toJson().toString());
+        // Clear previous data before inserting new data
+        _sqfliteHelper.clearAllData();
+        //store userInfo to sqflite
+        await _sqfliteHelper.insertUser(parent);
         //store session data
         SharedPreferenceHelper.setUserSessionId(userInfo[0]['sessionid']);
         // Fetch subscription data
@@ -215,6 +245,8 @@ class _HomeScreenState extends State<HomeScreen>
           );
           //store children data
           children.add(child);
+          //store child data to sqflite
+          await _sqfliteHelper.insertChild(child);
           //store routeInfo data
           allParsedRouteInfo.addAll(parsedRouteInfo);
           Logger().i("${child.toJson()} $parsedRouteInfo");
@@ -306,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen>
         final int status = data['status'] as int? ?? 1; // Default to onboard
 
         if (studentId != null) {
-          _updateChildStatus(studentId, status);
+          _updateChildStatus(studentId, status, jsonMessage);
         } else {
           Logger().w('Missing studentid in onboard message');
         }
@@ -317,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen>
         if (offlist != null) {
           for (var id in offlist) {
             if (id is String) {
-              _updateChildStatus(id, 2); // Offboard status
+              _updateChildStatus(id, 2, jsonMessage); // Offboard status
             }
           }
         } else {
@@ -358,7 +390,11 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  void _updateChildStatus(String studentId, int status) {
+  void _updateChildStatus(
+    String studentId,
+    int status,
+    Map<String, dynamic> jsonMessage,
+  ) {
     final childIndex = children.indexWhere(
       (child) => child.studentId == studentId,
     );
@@ -370,6 +406,15 @@ class _HomeScreenState extends State<HomeScreen>
         body:
             'Child ${children[childIndex].name} has been ${status == 1 ? 'onboarded' : 'offboarded'}.',
       );
+      //save to database
+      _sqfliteHelper.insertActivity({
+        'student_id': studentId,
+        'student_name': children[childIndex].name,
+        'status': status == 1 ? 'onboarded' : 'offboarded',
+        'location': jsonMessage['data']['location'],
+        'route_id': jsonMessage['devid'].split('_')[0],
+        'oprid': jsonMessage['devid'].split('_')[1],
+      });
 
       // Update the status of the child
       Logger().i('Updating status for child $studentId to $status');
@@ -388,6 +433,9 @@ class _HomeScreenState extends State<HomeScreen>
           status: children[childIndex].status,
           onboard_status: status, //children[childIndex].onboard_status,
         );
+        if (status == 1 || status == 2) {
+          _boardRefreshKey++;
+        }
       });
       Logger().i('Updated status for child $studentId to $status');
     } else {
@@ -424,29 +472,187 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // Action methods
-  void _onSubscribe(Child child) {
+  void _onSubscribe(Child child) async {
     // Implement subscribe action
-    Logger().i('Subscribe clicked for ${child.name}');
+    Logger().i('Subscribe clicked for ${child.name}, ${child.studentId}');
     // Add your subscription logic here
-    Navigator.pushNamed(context, AppRoutes.subscribe);
+    final result = await Navigator.pushNamed(
+      context,
+      AppRoutes.subscribe,
+      arguments: child.studentId,
+    );
+    if (result == true) {
+      _fetchChildren();
+    }
   }
 
   void _onOnboard(String routeId, List<RouteInfo> routes) {
     // Implement onboard action
     Logger().i('Onboard clicked for route $routeId');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Onboard tapped for route $routeId')),
+    );
     // Add your onboard logic here
   }
 
   void _onOffboard(String routeId, List<RouteInfo> routes) {
     // Implement offboard action
     Logger().i('Offboard clicked for route $routeId');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Offboard tapped for route $routeId')),
+    );
     // Add your offboard logic here
   }
 
-  void _onAddRoute(Child child) {
-    // Implement add route action
+  void _onAddRoute(Child child) async {
     Logger().i('Add route clicked for ${child.name}');
-    // Add your add route logic here
-    Navigator.pushNamed(context, AppRoutes.addRoute, arguments: child.nickname);
+    // Navigate to AddChildRoutePage and wait for result
+    final result = await Navigator.pushNamed(
+      context,
+      AppRoutes.addRoute,
+      arguments: {'childName': child.nickname, 'childId': child.studentId},
+    );
+
+    // If a new route was added successfully, refresh the children list to show updated data
+    if (result == true) {
+      setState(() {
+        _isLoading = true;
+      });
+      await _fetchChildren();
+    }
+  }
+
+  _onBusTap(String routeId, List<RouteInfo> routes) {
+    // Implement bus tap action
+    Logger().i('Bus tapped for route $routeId');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Bus tapped for route $routeId')));
+    // Add your bus tap logic here
+  }
+
+  _onLocationTap(String routeId, List<RouteInfo> routes) async {
+    final userId = await SharedPreferenceHelper.getUserNumber();
+    final sessionId = await SharedPreferenceHelper.getUserSessionId();
+    final oprId = routes.first.oprid;
+    final vehicleId = routes.first.vehicleId;
+    Logger().i(
+      'Location tapped for route $routeId, userId: $userId, oprId: $oprId, sessionId: $sessionId',
+    );
+
+    try {
+      final responseRouteDetail = await ApiManager().post(
+        'ktuvehicleinfo/',
+        data: {
+          'userid': userId,
+          'sessionid': sessionId,
+          'vehicle_id': vehicleId,
+        },
+      );
+
+      final responseLocation = await ApiManager().post(
+        'ktuoperationstatus/',
+        data: {'userid': userId, 'oprid': oprId, 'sessionid': sessionId},
+      );
+
+      final map = _extractLocationAndRouteData(
+        responseLocation,
+        responseRouteDetail,
+      );
+      Logger().i(map);
+      //now open a custom dialog to show location and route details
+      _showLocationAndRouteDialog(map);
+    } catch (e) {
+      Logger().e('Error fetching location and route details: $e');
+    }
+  }
+
+  Map<String, dynamic> _extractLocationAndRouteData(
+    dynamic responseLocation,
+    dynamic responseRouteDetail,
+  ) {
+    final Map<String, dynamic> map = {};
+
+    if (responseLocation.statusCode == 200 &&
+        responseRouteDetail.statusCode == 200) {
+      Logger().i(responseLocation.data);
+      if (responseLocation.data.isNotEmpty &&
+          responseLocation.data[0]['result'] == 'ok' &&
+          responseLocation.data[1]['data'].isNotEmpty &&
+          responseLocation.data[1]['data'][0]['operation_status'] == 0) {
+        final location =
+            responseLocation.data[1]['data'][0]['current_location'];
+        final latitude = location.split(',')[0];
+        final longitude = location.split(',')[1];
+        map['latitude'] = latitude;
+        map['longitude'] = longitude;
+      }
+
+      if (responseRouteDetail.data.isNotEmpty &&
+          responseRouteDetail.data[0]['result'] == 'ok' &&
+          responseRouteDetail.data.length > 1 &&
+          responseRouteDetail.data[1]['data'].isNotEmpty) {
+        map['vehicle_name'] =
+            responseRouteDetail.data[1]['data'][0]['vehicle_name'];
+        map['reg_no'] = responseRouteDetail.data[1]['data'][0]['reg_no'];
+        map['driver_name'] =
+            responseRouteDetail.data[1]['data'][0]['driver_name'];
+        map['contact1'] = responseRouteDetail.data[1]['data'][0]['contact1'];
+        map['contact2'] = responseRouteDetail.data[1]['data'][0]['contact2'];
+      }
+    }
+    return map;
+  }
+
+  _onDeleteTap(String routeId, List<RouteInfo> routes, String studentId) async {
+    //userId
+    final userId = await SharedPreferenceHelper.getUserNumber();
+    final sessonId = await SharedPreferenceHelper.getUserSessionId();
+    final oprId = routes.first.oprid;
+    Logger().i(
+      'Delete tapped for route $routeId, userId: $userId, oprId: $oprId, sessonId: $sessonId',
+    );
+    // run api to delete/remove the route
+    ApiManager()
+        .post(
+          'ktuserstdroutedel/',
+          data: {
+            'student_id': studentId,
+            'oprid': oprId,
+            'sessionid': sessonId,
+            'userid': userId,
+          },
+        )
+        .then((response) {
+          if (response.statusCode == 200) {
+            Logger().i(response.data);
+            if (response.data[0]['result'] == 'ok') {
+              if (response.data[1]['data'] == 'ok') {
+                setState(() {
+                  _isLoading = true;
+                });
+                _fetchChildren();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Delete tapped for route $routeId')),
+                );
+              }
+            }
+          }
+        });
+  }
+
+  void _showLocationAndRouteDialog(Map<String, dynamic> map) {
+    showDialog(
+      context: context,
+      builder: (context) => LocationAndRouteDialog(
+        latitude: double.tryParse(map['latitude'] ?? '0') ?? 0.0,
+        longitude: double.tryParse(map['longitude'] ?? '0') ?? 0.0,
+        vehicleName: map['vehicle_name'] ?? '',
+        regNo: map['reg_no'] ?? '',
+        driverName: map['driver_name'] ?? '',
+        contact1: map['contact1'] ?? '',
+        contact2: map['contact2'] ?? '',
+      ),
+    );
   }
 }

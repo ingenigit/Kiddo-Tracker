@@ -45,11 +45,11 @@ class _MainScreenState extends State<MainScreen> {
             _selectedIndex = index;
           });
         },
-        children: const[
-          HomeScreen(),
-          AddChildScreen(),
-          ActivityScreen(),
-          Center(child: Text('Alerts Screen')),
+        children: [
+          const HomeScreen(),
+          const AddChildScreen(),
+          const ActivityScreen(),
+          const Center(child: Text('Alerts Screen')),
           SettingScreen(),
         ],
       ),

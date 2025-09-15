@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:kiddo_tracker/model/child.dart';
 import 'package:kiddo_tracker/model/parent.dart';
+import 'package:kiddo_tracker/model/route.dart';
+import 'package:logger/logger.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -11,14 +14,14 @@ class SqfliteHelper {
   static Database? _db;
 
   Future<Database> get db async {
-    if (_db != null) return _db!;
+    if (_db != null && _db!.isOpen) return _db!;
     _db = await _initDb();
     return _db!;
   }
 
   Future<Database> _initDb() async {
     String path = join(await getDatabasesPath(), 'kiddo_tracker.db');
-    return await openDatabase(path, version: 1, onCreate: _onCreate);
+    return await openDatabase(path, version: 1, onCreate: _onCreate, readOnly: false);
   }
 
   Future _onCreate(Database db, int version) async {
@@ -56,7 +59,6 @@ class SqfliteHelper {
       route_info TEXT,
       status INTEGER,
       onboard_status INTEGER,
-      selected_plan TEXT
       )
     ''');
 
@@ -74,6 +76,66 @@ class SqfliteHelper {
     //     FOREIGN KEY(child_id) REFERENCES child(id) ON DELETE CASCADE
     //   )
     // ''');
+
+    //set the message activity
+    await db.execute('''
+      CREATE TABLE activityStatus(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id TEXT,
+      student_name TEXT,
+      status TEXT,
+      location TEXT,
+      route_id TEXT,
+      oprid TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+  }
+
+  //activity CURD
+  Future<int> insertActivity(Map<String, dynamic> activity) async {
+    final dbClient = await db;
+    return await dbClient.insert('activityStatus', activity);
+  }
+
+  Future<List<Map<String, dynamic>>> getActivities() async {
+    final dbClient = await db;
+    return await dbClient.query('activityStatus');
+  }
+
+  Future<Map<String, String>> getActivityTimesForRoute(
+    String routeId,
+    String oprid,
+    String studentId,
+  ) async {
+    final dbClient = await db;
+    final String today = DateTime.now().toIso8601String().split(
+      'T',
+    )[0]; // Get current date in YYYY-MM-DD format
+    final List<Map<String, dynamic>> results = await dbClient.query(
+      'activityStatus',
+      where:
+          'route_id = ? AND oprid = ? AND student_id = ? AND DATE(created_at) = ?',
+      whereArgs: [routeId, oprid, studentId, today],
+      orderBy: 'created_at ASC',
+    );
+    Logger().i(results);
+    String onboardTime = '_';
+    String offboardTime = '_';
+
+    // Sort results by created_at descending to get the latest
+    List<Map<String, dynamic>> sortedResults = List.from(results);
+    sortedResults.sort((a, b) => b['created_at'].compareTo(a['created_at']));
+
+    for (var row in sortedResults) {
+      if (row['status'] == 'onboarded' && onboardTime == '_') {
+        onboardTime = row['created_at'].toString();
+      } else if (row['status'] == 'offboarded' && offboardTime == '_') {
+        offboardTime = row['created_at'].toString();
+      }
+    }
+
+    return {'onboardTime': onboardTime, 'offboardTime': offboardTime};
   }
 
   // User CRUD
@@ -93,7 +155,7 @@ class SqfliteHelper {
     return await dbClient.insert('child', child.toJson());
   }
 
-  Future<List<Map<String, dynamic>>> getChildren(int userId) async {
+  Future<List<Map<String, dynamic>>> getChildren() async {
     final dbClient = await db;
     return await dbClient.query('child');
   }
@@ -107,6 +169,52 @@ class SqfliteHelper {
       where: 'student_id = ?',
       whereArgs: [child.student_id],
     );
+  }
+
+  //delete the child
+  Future<int> deleteChild(String studentId) async {
+    final dbClient = await db;
+    return await dbClient.delete(
+      'child',
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+    );
+  }
+
+  //get route_info by student_id
+  Future<String?> getRouteInfoByStudentId(String studentId) async {
+    final dbClient = await db;
+    final results = await dbClient.query(
+      'child',
+      columns: ['route_info'],
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+    );
+    if (results.isNotEmpty) {
+      return results.first['route_info'] as String?;
+    }
+    return null;
+  }
+
+  //get all routes in String array oprid base on student_id from child table
+  Future<List<String>> getAllRoutesByStudentId(String studentId) async {
+    //if no data then it should be [] and if it has then ["", ""]
+    //take the oprid from child's route_info
+    final routeInfoStr = await getRouteInfoByStudentId(studentId);
+    if (routeInfoStr == null || routeInfoStr.isEmpty) {
+      return [];
+    }
+    try {
+      final decoded = jsonDecode(routeInfoStr);
+      if (decoded is List) {
+        final routeInfos = decoded.map<RouteInfo>((e) => RouteInfo.fromJson(e is String ? jsonDecode(e) : e as Map<String, dynamic>)).toList();
+        return routeInfos.map((route) => route.oprid).toList();
+      }
+    } catch (e) {
+      // If parsing fails, return empty list
+      Logger().e(e);
+    }
+    return [];
   }
 
   // Route CRUD
@@ -128,16 +236,16 @@ class SqfliteHelper {
   Future close() async {
     final dbClient = await db;
     dbClient.close();
+    _db = null;
   }
 
-  void clearAllData() {
-    if (_db == null) return;
-    try {
-      _db!.delete('user');
-      _db!.delete('child');
-      // _db!.delete('route');
-    } on Exception {
-      // Do nothing
-    }
+  void clearAllData() async {
+    //clear all data from the database
+    await db.then((client) {
+      client.execute('DELETE FROM user;');
+      client.execute('DELETE FROM child;');
+      client.execute('DELETE FROM route;');
+      client.execute('DELETE FROM activityStatus;');
+    });
   }
 }

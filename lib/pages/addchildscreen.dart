@@ -6,7 +6,10 @@ import 'package:logger/logger.dart';
 import '../routes/routes.dart';
 
 class AddChildScreen extends StatefulWidget {
-  const AddChildScreen({super.key});
+  final Map<String, dynamic>? childData;
+  final bool isEdit;
+
+  const AddChildScreen({super.key, this.childData, this.isEdit = false});
 
   @override
   _AddChildScreenState createState() => _AddChildScreenState();
@@ -24,6 +27,21 @@ class _AddChildScreenState extends State<AddChildScreen> {
   final TextEditingController _ageController = TextEditingController();
 
   String? gender;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEdit && widget.childData != null) {
+      _nameController.text = widget.childData!['name'] ?? '';
+      _nicknameController.text = widget.childData!['nickname'] ?? '';
+      _schoolController.text = widget.childData!['school'] ?? '';
+      _classNameController.text = widget.childData!['class_name'] ?? '';
+      _rollNoController.text = widget.childData!['rollno'] ?? '';
+      _stateController.text = widget.childData!['state'] ?? '';
+      _ageController.text = widget.childData!['age']?.toString() ?? '';
+      gender = widget.childData!['gender'] ?? null;
+    }
+  }
 
   @override
   void dispose() {
@@ -54,6 +72,9 @@ class _AddChildScreenState extends State<AddChildScreen> {
     final rollNo = _rollNoController.text;
     final age = _ageController.text;
     final state = _stateController.text;
+    Logger().i(
+      'name: $name, nickname: $nickname, school: $school, class: $className, rollNo: $rollNo, age: $age, state: $state, gender: $gender',
+    );
     //validate the form data
     if (name.isEmpty ||
         nickname.isEmpty ||
@@ -70,9 +91,13 @@ class _AddChildScreenState extends State<AddChildScreen> {
       Logger().i(
         'Name: $name, Nickname: $nickname, School: $school, Class: $className, Roll No: $rollNo, State: $state, Gender: $gender',
       );
-      //submit the form data
+
+      final apiEndpoint = widget.isEdit
+          ? 'ktuserstudentedit'
+          : 'ktuseraddstudent';
+
       final response = await ApiManager().post(
-        'ktuseraddstudent',
+        apiEndpoint,
         data: {
           'userid': userId,
           'sessionid': sessionId,
@@ -84,18 +109,29 @@ class _AddChildScreenState extends State<AddChildScreen> {
           'gender': gender,
           'age': age,
           'state': state,
+          if (widget.isEdit) 'student_id': widget.childData?['student_id'],
         },
       );
       final data = response.data;
       Logger().i(data);
       if (data[0]['result'] == 'ok') {
-        _showSnackBar('Child added successfully', Colors.green);
+        _showSnackBar(
+          widget.isEdit
+              ? 'Child updated successfully'
+              : 'Child added successfully',
+          Colors.green,
+        );
         //back to home screen
-        Navigator.pop(context);
-        //refresh the home screen
-        Navigator.pushReplacementNamed(context, AppRoutes.main);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.main,
+          (route) => false,
+        );
       } else {
-        _showSnackBar('Error adding child', Colors.red);
+        _showSnackBar(
+          widget.isEdit ? 'Error updating child' : 'Error adding child',
+          Colors.red,
+        );
       }
     }
   }
@@ -247,7 +283,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
                   padding: EdgeInsets.symmetric(vertical: 16),
                   textStyle: TextStyle(fontSize: 18),
                 ),
-                child: Text('Add Child'),
+                child: Text(widget.isEdit ? 'Update Child' : 'Add Child'),
               ),
             ],
           ),

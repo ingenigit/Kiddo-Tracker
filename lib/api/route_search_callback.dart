@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:kiddo_tracker/model/routelist.dart';
 
 class RouteSearchCallback {
@@ -78,9 +76,9 @@ class RouteSearchCallback {
   }
 
   // Return the oprId for a given timing
-  int getOprIdbyTiming(String timing) {
+  int getOprIdbyTiming(String timing, String routeId) {
     for (RouteList route in routeList) {
-      if (route.timing == timing) {
+      if (route.timing == timing && route.routeId == routeId) {
         return route.oprid;
       }
     }
@@ -105,5 +103,14 @@ class RouteSearchCallback {
       }
     }
     return stopDetails;
+  }
+
+  getVehicleIdbyTiming(String timing, String routeId) {
+    for (RouteList route in routeList) {
+      if (route.timing == timing && route.routeId == routeId) {
+        return route.vehicleId;
+      }
+    }
+    return 0;
   }
 }
