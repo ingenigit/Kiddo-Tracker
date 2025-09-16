@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:kiddo_tracker/api/apimanage.dart';
+import 'package:kiddo_tracker/model/child.dart';
+import 'package:kiddo_tracker/services/children_provider.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
+import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:logger/logger.dart';
+import 'package:provider/provider.dart';
+import 'package:provider/provider.dart';
 
 import '../routes/routes.dart';
 
@@ -17,7 +22,7 @@ class AddChildScreen extends StatefulWidget {
 
 class _AddChildScreenState extends State<AddChildScreen> {
   final _formKey = GlobalKey<FormState>();
-
+  SqfliteHelper db = SqfliteHelper();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _schoolController = TextEditingController();
@@ -39,7 +44,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
       _rollNoController.text = widget.childData!['rollno'] ?? '';
       _stateController.text = widget.childData!['state'] ?? '';
       _ageController.text = widget.childData!['age']?.toString() ?? '';
-      gender = widget.childData!['gender'] ?? null;
+      gender = widget.childData!['gender'];
     }
   }
 
@@ -65,7 +70,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
     //get the form data
     final String? userId = await SharedPreferenceHelper.getUserNumber();
     final String? sessionId = await SharedPreferenceHelper.getUserSessionId();
-    final name = _nameController.text;
+    final childname = _nameController.text;
     final nickname = _nicknameController.text;
     final school = _schoolController.text;
     final className = _classNameController.text;
@@ -73,10 +78,10 @@ class _AddChildScreenState extends State<AddChildScreen> {
     final age = _ageController.text;
     final state = _stateController.text;
     Logger().i(
-      'name: $name, nickname: $nickname, school: $school, class: $className, rollNo: $rollNo, age: $age, state: $state, gender: $gender',
+      'name: $childname, nickname: $nickname, school: $school, class: $className, rollNo: $rollNo, age: $age, state: $state, gender: $gender',
     );
     //validate the form data
-    if (name.isEmpty ||
+    if (childname.isEmpty ||
         nickname.isEmpty ||
         school.isEmpty ||
         className.isEmpty ||
@@ -85,11 +90,10 @@ class _AddChildScreenState extends State<AddChildScreen> {
       _showSnackBar('Please fill in all fields', Colors.red);
     } else {
       //print
-
       Logger().i('userid: $userId');
       Logger().i('sessionid: $sessionId');
       Logger().i(
-        'Name: $name, Nickname: $nickname, School: $school, Class: $className, Roll No: $rollNo, State: $state, Gender: $gender',
+        'Name: $childname, Nickname: $nickname, School: $school, Class: $className, Roll No: $rollNo, State: $state, Gender: $gender',
       );
 
       final apiEndpoint = widget.isEdit
@@ -101,7 +105,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
         data: {
           'userid': userId,
           'sessionid': sessionId,
-          'name': name,
+          'name': childname,
           'nickname': nickname,
           'school': school,
           'class': className,
@@ -115,18 +119,65 @@ class _AddChildScreenState extends State<AddChildScreen> {
       final data = response.data;
       Logger().i(data);
       if (data[0]['result'] == 'ok') {
+        final int parsedAge = int.parse(age);
+        if (!widget.isEdit) {
+          //add new child in database
+          final studentId = data[1]['data']['student_id'] ?? '';
+          final child = Child(
+            studentId: studentId,
+            name: childname,
+            nickname: nickname,
+            school: school,
+            class_name: className,
+            rollno: rollNo,
+            age: parsedAge,
+            gender: gender ?? '',
+            tagId: "",
+            routeInfo: [],
+            status: 0,
+            onboard_status: 0,
+          );
+          // save child to database
+          await db.insertChild(child);
+          //show child data
+          Logger().i(child.toJson());
+          Logger().i('Child added successfully');
+        } else {
+          // update existing child in database
+          final studentId = widget.childData?['student_id'] ?? '';
+          final child = Child(
+            studentId: studentId,
+            name: childname,
+            nickname: nickname,
+            school: school,
+            class_name: className,
+            rollno: rollNo,
+            age: parsedAge,
+            gender: gender ?? '',
+            tagId: widget.childData?['tagId'] ?? '',
+            routeInfo: widget.childData?['routeInfo'] ?? [],
+            status: widget.childData?['status'] ?? 0,
+            onboard_status: widget.childData?['onboard_status'] ?? 0,
+          );
+          await db.updateChild(child);
+          Logger().i('Child updated successfully');
+        }
         _showSnackBar(
           widget.isEdit
               ? 'Child updated successfully'
               : 'Child added successfully',
           Colors.green,
         );
+        // clear all the text fields
+        clearAllField();
+        // update the list of children in the HomeScreen
+        Provider.of<ChildrenProvider>(context, listen: false).updateChildren();
         //back to home screen
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.main,
-          (route) => false,
-        );
+        // Navigator.pushNamedAndRemoveUntil(
+        //   context,
+        //   AppRoutes.main,
+        //   (route) => false,
+        // );
       } else {
         _showSnackBar(
           widget.isEdit ? 'Error updating child' : 'Error adding child',
@@ -290,5 +341,16 @@ class _AddChildScreenState extends State<AddChildScreen> {
         ),
       ),
     );
+  }
+
+  void clearAllField() {
+    _nameController.clear();
+    _nicknameController.clear();
+    _schoolController.clear();
+    _classNameController.clear();
+    _rollNoController.clear();
+    _ageController.clear();
+    _stateController.clear();
+    gender = null;
   }
 }

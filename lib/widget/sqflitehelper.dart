@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:kiddo_tracker/model/child.dart';
 import 'package:kiddo_tracker/model/parent.dart';
 import 'package:kiddo_tracker/model/route.dart';
+import 'package:kiddo_tracker/model/subscribe.dart';
+import 'package:kiddo_tracker/services/children_provider.dart';
 import 'package:logger/logger.dart';
+import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -21,7 +24,12 @@ class SqfliteHelper {
 
   Future<Database> _initDb() async {
     String path = join(await getDatabasesPath(), 'kiddo_tracker.db');
-    return await openDatabase(path, version: 1, onCreate: _onCreate, readOnly: false);
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _onCreate,
+      readOnly: false,
+    );
   }
 
   Future _onCreate(Database db, int version) async {
@@ -58,7 +66,7 @@ class SqfliteHelper {
       tag_id TEXT,
       route_info TEXT,
       status INTEGER,
-      onboard_status INTEGER,
+      onboard_status INTEGER
       )
     ''');
 
@@ -88,6 +96,22 @@ class SqfliteHelper {
       route_id TEXT,
       oprid TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    //studentSubscriptions table
+    await db.execute('''
+      CREATE TABLE studentSubscriptions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT,
+        plan_name TEXT,
+        plan_details TEXT,
+        validity INTEGER,
+        price INTEGER,
+        startdate TEXT,
+        enddate TEXT,
+        status INTEGER,
+        userid TEXT
       )
     ''');
   }
@@ -207,8 +231,14 @@ class SqfliteHelper {
     try {
       final decoded = jsonDecode(routeInfoStr);
       if (decoded is List) {
-        final routeInfos = decoded.map<RouteInfo>((e) => RouteInfo.fromJson(e is String ? jsonDecode(e) : e as Map<String, dynamic>)).toList();
-        return routeInfos.map((route) => route.oprid).toList();
+        final routeInfos = decoded
+            .map<RouteInfo>(
+              (e) => RouteInfo.fromJson(
+                e is String ? jsonDecode(e) : e as Map<String, dynamic>,
+              ),
+            )
+            .toList();
+        return routeInfos.map((route) => route.oprId).toList();
       }
     } catch (e) {
       // If parsing fails, return empty list
@@ -217,20 +247,55 @@ class SqfliteHelper {
     return [];
   }
 
-  // Route CRUD
-  // Future<int> insertRoute(Map<String, dynamic> route) async {
-  //   final dbClient = await db;
-  //   return await dbClient.insert('route', route);
-  // }
+  // add route_info data to child base on student_id
+  Future<int> updateRouteInfoByStudentId(
+    String studentId,
+    String routeInfo,
+  ) async {
+    final dbClient = await db;
+    return await dbClient.update(
+      'child',
+      {'route_info': routeInfo},
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+    );
+  }
 
-  // Future<List<Map<String, dynamic>>> getRoutes(int childId) async {
-  //   final dbClient = await db;
-  //   return await dbClient.query(
-  //     'route',
-  //     where: 'child_id = ?',
-  //     whereArgs: [childId],
-  //   );
-  // }
+  //delete the single route from route_info of child base on student_id and opr_id
+  Future<int> deleteRouteInfoByStudentIdAndOprId(
+    String studentId,
+    String oprId,
+  ) async {
+    final routeInfoStr = await getRouteInfoByStudentId(studentId);
+    Logger().i(routeInfoStr);
+    if (routeInfoStr == null || routeInfoStr.isEmpty) {
+      return 0;
+    }
+    try {
+      final decoded = jsonDecode(routeInfoStr);
+      if (decoded is List) {
+        List<RouteInfo> routeInfos = decoded
+            .map<RouteInfo>(
+              (e) => RouteInfo.fromJson(
+                e is String ? jsonDecode(e) : e as Map<String, dynamic>,
+              ),
+            )
+            .toList();
+        // Remove the route with matching oprId
+        routeInfos.removeWhere((route) => route.oprId == oprId);
+        // Encode back to JSON string
+        final updatedRouteInfoStr = jsonEncode(
+          routeInfos.map((e) => e.toJson()).toList(),
+        );
+        // Update the child table
+        return await updateRouteInfoByStudentId(studentId, updatedRouteInfoStr);
+      }
+    } catch (e) {
+      Logger().e('Error deleting route info: $e');
+      return 0;
+    }
+    return 0;
+  }
 
   // Close the database
   Future close() async {
@@ -239,13 +304,43 @@ class SqfliteHelper {
     _db = null;
   }
 
+  // studentSubscriptions CRUD
+  Future<int> insertStudentSubscription(SubscriptionPlan subscription) async {
+    final dbClient = await db;
+    return await dbClient.insert('studentSubscriptions', subscription.toJson());
+  }
+
+  Future<List<Map<String, dynamic>>> getStudentSubscriptions() async {
+    final dbClient = await db;
+    return await dbClient.query('studentSubscriptions');
+  }
+
+  Future<int> updateStudentSubscription(SubscriptionPlan subscription) async {
+    final dbClient = await db;
+    return await dbClient.update(
+      'studentSubscriptions',
+      subscription.toJson(),
+      where: 'student_id = ?',
+      whereArgs: [subscription.student_id],
+    );
+  }
+
+  Future<int> deleteStudentSubscription(String studentId) async {
+    final dbClient = await db;
+    return await dbClient.delete(
+      'studentSubscriptions',
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+    );
+  }
+
   void clearAllData() async {
     //clear all data from the database
     await db.then((client) {
       client.execute('DELETE FROM user;');
       client.execute('DELETE FROM child;');
-      client.execute('DELETE FROM route;');
       client.execute('DELETE FROM activityStatus;');
+      client.execute('DELETE FROM studentSubscriptions;');
     });
   }
 }

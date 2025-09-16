@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kiddo_tracker/api/apimanage.dart';
+import 'package:kiddo_tracker/api/api_service.dart';
+import 'package:kiddo_tracker/services/children_service.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
 import 'package:logger/logger.dart';
 
@@ -14,12 +15,14 @@ class OTPScreen extends StatefulWidget {
 }
 
 class _OTPScreenState extends State<OTPScreen> {
+  
   final List<TextEditingController> _controllers = List.generate(
     6,
     (_) => TextEditingController(),
   );
-  final ApiManager apiManager = ApiManager();
   final Logger logger = Logger();
+
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -31,40 +34,61 @@ class _OTPScreenState extends State<OTPScreen> {
 
   Future<void> _signIn() async {
     final otp = _controllers.map((c) => c.text).join();
-    // Handle OTP sign in logic here
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('${widget.mobile} OTP: $otp')));
-    //use shared preferences to save mobile number
-    SharedPreferenceHelper.setUserNumber(widget.mobile ?? '');
-    //using apiManager to verify otp and navigate to next screen on success
-    String mobileNumber = widget.mobile ?? '';
-    apiManager
-        .post(
-          'ktrackuserverifyotp/',
-          data: {'mobile': mobileNumber, 'otpval': otp},
-        )
-        .then((response) {
-          if (response.statusCode == 200) {
-            logger.i(response.toString());
-            if (response.data[0]['result'] == 'ok') {
-              // print response
-              print(response.toString());
-              // Success animation before navigation
-              Navigator.pushNamed(context, AppRoutes.main);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error: ${response.data['message']}')),
-              );
-            }
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to send OTP: ${response.statusMessage}'),
-              ),
-            );
-          }
+
+    if (otp.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid 6-digit OTP')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Save mobile number in shared preferences
+      SharedPreferenceHelper.setUserNumber(widget.mobile ?? '');
+
+      String mobileNumber = widget.mobile ?? '';
+      final response = await ApiService.verifyOTP(mobileNumber, otp);
+
+      if (response.statusCode == 200) {
+        logger.i(response.toString());
+        if (response.data[0]['result'] == 'ok') {
+          // call another method
+          _fetchChildren();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('OTP verified successfully')),
+          );
+        } else if (response.data[0]['result'] == 'Invaild OTP') {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Invaild OTP')));
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to verify OTP: ${response.statusMessage}'),
+          ),
+        );
+      }
+    } catch (e, stacktrace) {
+      logger.e(
+        'Error during OTP verification',
+        error: e,
+        stackTrace: stacktrace,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred. Please try again.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
         });
+      }
+    }
   }
 
   @override
@@ -147,7 +171,7 @@ class _OTPScreenState extends State<OTPScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _signIn,
+                    onPressed: _isLoading ? null : _signIn,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF9F7BFF),
                       shape: RoundedRectangleBorder(
@@ -155,15 +179,21 @@ class _OTPScreenState extends State<OTPScreen> {
                       ),
                       elevation: 3,
                     ),
-                    child: const Text(
-                      'Sign In',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Sign In',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -172,5 +202,39 @@ class _OTPScreenState extends State<OTPScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _fetchChildren() async {
+    try {
+      final result = await ChildrenService().fetchChildren();
+      if (result['success'] == true) {
+        if (mounted) {
+          Navigator.pushNamed(context, AppRoutes.main);
+        }
+        setState(() {
+          _isLoading = false;
+        });
+      } else if (result['success'] == false) {
+        if (mounted) {
+          Navigator.pushNamed(context, AppRoutes.signup);
+        }
+        Logger().e('Error fetching children: ${result['data']}');
+        setState(() {
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        Logger().e(
+          'Error fetching children: ${result['error'] ?? 'Unknown error'}',
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      Logger().e('Error fetching children: $e');
+    }
   }
 }

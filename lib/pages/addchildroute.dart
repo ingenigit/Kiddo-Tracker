@@ -1,9 +1,14 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:kiddo_tracker/api/apimanage.dart';
 import 'package:kiddo_tracker/api/route_search_callback.dart';
+import 'package:kiddo_tracker/model/route.dart';
 import 'package:kiddo_tracker/model/routelist.dart';
+import 'package:kiddo_tracker/services/children_provider.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
+import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:logger/logger.dart';
+import 'package:provider/provider.dart';
 
 class AddChildRoutePage extends StatefulWidget {
   String? nickName;
@@ -69,15 +74,58 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
               'tsp_id': _selectedInstitute,
             },
           )
-          .then((response) {
+          .then((response) async {
             if (response.statusCode == 200) {
               Logger().i(response.data);
               if (response.data[0]['result'] == 'ok') {
                 if (response.data[1]['data'] == 'ok') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("New Route Added Successfully.")),
-                  );
-                  Navigator.pop(context, true);
+                  if (widget.stdId != null) {
+                    final sqfliteHelper = SqfliteHelper();
+                    // Get existing routes
+                    final existingRouteStr = await sqfliteHelper.getRouteInfoByStudentId(widget.stdId!);
+                    List<RouteInfo> routeList = [];
+                    if (existingRouteStr != null && existingRouteStr.isNotEmpty) {
+                      try {
+                        final decoded = jsonDecode(existingRouteStr);
+                        if (decoded is List) {
+                          routeList = decoded.map<RouteInfo>((e) => RouteInfo.fromJson(e is String ? jsonDecode(e) : e as Map<String, dynamic>)).toList();
+                        }
+                      } catch (e) {
+                        Logger().e('Error decoding existing routes: $e');
+                      }
+                    }
+                    // Add new route
+                    routeList.add(RouteInfo(
+                      routeId: _selectedRouteId ?? '',
+                      routeName: _selectedRouteName ?? '',
+                      stopArrivalTime: _selectedTime ?? '',
+                      stopName: _selectedStopageName ?? '',
+                      oprId: _selectedorpId ?? '',
+                      vehicleId: _vehicleId ?? '',
+                      stopId: _stopageId ?? '',
+                    ));
+                    // make the routeList inside String
+                    Logger().i(routeList.map((e) => e.toJson()).toList());
+                    final newRoute = jsonEncode(routeList.map((e) => e.toJson()).toList());
+                    Logger().i(newRoute);
+                    await sqfliteHelper.updateRouteInfoByStudentId(
+                      widget.stdId!,
+                      newRoute,
+                    );
+                    Provider.of<ChildrenProvider>(
+                      context,
+                      listen: false,
+                    ).updateChildren();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("New Route Added Successfully.")),
+                    );
+                  } else {
+                    // Handle the case when widget.stdId is null
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: widget.stdId is null')),
+                    );
+                  }
+                  // Navigator.pop(context, true);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

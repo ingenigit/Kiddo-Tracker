@@ -54,7 +54,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
       //also upadate onboard time and offboard time if same student message is received
       final times = await _sqfliteHelper.getActivityTimesForRoute(
         route.routeId,
-        route.oprid,
+        route.oprId,
         widget.childId,
       );
       setState(() {
@@ -379,7 +379,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                     child: const Icon(
                       Icons.delete,
                       size: 30,
-                      color: Colors.red,
+                      color: Color.fromARGB(255, 255, 136, 127),
                     ),
                   ),
                 ),
@@ -394,7 +394,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
   Color _getBusIconColor() {
     // Check if any route in the list is active
     for (var route in widget.routes) {
-      String key = '${route.routeId}_${route.oprid}';
+      String key = '${route.routeId}_${route.oprId}';
       if (widget.activeRoutes[key] == true) {
         return Colors.green; // Active
       }

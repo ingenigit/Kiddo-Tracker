@@ -124,19 +124,20 @@ class ChildCardWidget extends StatelessWidget {
                                 ),
                               ),
                             );
-                          } else if (subscription!.student_id == child.studentId && child.status == 0) {
-                            return GestureDetector(
-                              child: const Text(
-                                "Plan Selected",
-                                style: TextStyle(
-                                  color: Colors.green,
-                                  fontSize: 14,
-                                  fontFamily: 'Poppins',
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            );
                           }
+                          // else if (subscription!.student_id == child.studentId && child.status == 0) {
+                          //   return GestureDetector(
+                          //     child: const Text(
+                          //       "Plan Selected",
+                          //       style: TextStyle(
+                          //         color: Colors.green,
+                          //         fontSize: 14,
+                          //         fontFamily: 'Poppins',
+                          //         decoration: TextDecoration.underline,
+                          //       ),
+                          //     ),
+                          //   );
+                          // }
                           else {
                             return Text(
                               _statusText(child.onboard_status),

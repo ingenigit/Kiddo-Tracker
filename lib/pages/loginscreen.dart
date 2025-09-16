@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kiddo_tracker/api/apimanage.dart';
+import 'package:kiddo_tracker/api/api_service.dart';
 import 'package:kiddo_tracker/routes/routes.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -11,7 +11,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _mobileController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  final ApiManager apiManager = ApiManager();
   bool _isLoading = false;
 
   @override
@@ -120,12 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: ElevatedButton(
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
-                              // callAPI();
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.otp,
-                                arguments: _mobileController.text,
-                              );
+                              callAPI();
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -201,41 +195,38 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final mobileNumber = _mobileController.text;
-    apiManager
-        .post('ktrackuserotp/', data: {'mobile': mobileNumber})
-        .then((response) {
-          setState(() {
-            _isLoading = false;
-          });
+    ApiService.sendOTP(mobileNumber).then((response) {
+      setState(() {
+        _isLoading = false;
+      });
 
-          if (response.statusCode == 200) {
-            if (response.data[0]['result'] == 'ok') {
-              // Success animation before navigation
-              Navigator.pushNamed(
-                context,
-                AppRoutes.otp,
-                arguments: mobileNumber,
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error: ${response.data['message']}')),
-              );
-            }
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to send OTP: ${response.statusMessage}'),
-              ),
-            );
-          }
-        })
-        .catchError((error) {
-          setState(() {
-            _isLoading = false;
-          });
-          ScaffoldMessenger.of(
+      if (response.statusCode == 200) {
+        if (response.data[0]['result'] == 'ok') {
+          // Success animation before navigation
+          Navigator.pushNamed(
             context,
-          ).showSnackBar(SnackBar(content: Text('Error: $error')));
-        });
+            AppRoutes.otp,
+            arguments: mobileNumber,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.data['message']}')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send OTP: ${response.statusMessage}'),
+          ),
+        );
+      }
+    }).catchError((error) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $error')));
+    });
   }
 }

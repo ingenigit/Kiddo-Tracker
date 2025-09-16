@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:kiddo_tracker/api/apimanage.dart';
+import 'package:kiddo_tracker/model/subscribe.dart';
 import 'package:kiddo_tracker/model/subscription.dart';
-import 'package:kiddo_tracker/pages/homescreen.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
+import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:logger/logger.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
@@ -207,6 +208,20 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     if (response2.statusCode == 200) {
       if (response2.data[0]['result'] == 'ok') {
         if (response2.data[1]['data'] == 'ok') {
+          //ADD TO studentSubscriptions DATABASE
+          await SqfliteHelper().insertStudentSubscription(
+            SubscriptionPlan(
+              student_id: widget.childid ?? '',
+              plan_name: packageName,
+              plan_details: packageDetails,
+              validity: packageValidity,
+              price: price,
+              startdate: currentDate,
+              enddate: endDateString,
+              status: 1,
+              userid: userNumber ?? '',
+            ),
+          );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(

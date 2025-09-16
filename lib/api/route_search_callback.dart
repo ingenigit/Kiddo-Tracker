@@ -39,6 +39,10 @@ class RouteSearchCallback {
         routeList.add(route);
         uniqueRouteIds.add(route.routeId);
         routeTimingsMap.putIfAbsent(route.routeId, () => []).add(route.timing);
+        // in database store
+        // route.routeId, route.timing, route.oprId, route.routeName, route.type, route.stopDetails, route.stopList, route.vehicleId
+        
+
       }
 
       reqStatus = 1;

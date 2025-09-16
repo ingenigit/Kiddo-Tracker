@@ -12,7 +12,7 @@ class LocationAndRouteDialog extends StatelessWidget {
   final String contact2;
 
   const LocationAndRouteDialog({
-    Key? key,
+    super.key,
     required this.latitude,
     required this.longitude,
     required this.vehicleName,
@@ -20,7 +20,7 @@ class LocationAndRouteDialog extends StatelessWidget {
     required this.driverName,
     required this.contact1,
     required this.contact2,
-  }) : super(key: key);
+  });
 
   Future<void> _callNumber(String number) async {
     final Uri launchUri = Uri(

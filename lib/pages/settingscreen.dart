@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:kiddo_tracker/api/apimanage.dart';
 import 'package:kiddo_tracker/pages/addchildscreen.dart';
-import 'package:kiddo_tracker/services/global_event.dart';
+import 'package:kiddo_tracker/services/children_provider.dart';
 import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:logger/logger.dart';
+import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 class SettingScreen extends StatefulWidget {
-  const SettingScreen({Key? key}) : super(key: key);
+  const SettingScreen({super.key});
   @override
   _SettingScreenState createState() => _SettingScreenState();
 }
@@ -88,7 +89,7 @@ class _SettingScreenState extends State<SettingScreen> {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
               SizedBox(height: 16),
               //   SwitchListTile(
               //     title: Text('Dark Mode'),
@@ -149,10 +150,7 @@ class _SettingScreenState extends State<SettingScreen> {
           setState(() {
             children.removeAt(idx);
           });
-          // Optionally refresh data from DB
-          await _fetchUserData();
-          // Fire event to notify HomeScreen to refresh
-          GlobalEvent().emitEvent('childDeleted');
+          Provider.of<ChildrenProvider>(context, listen: false).updateChildren();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -161,9 +159,6 @@ class _SettingScreenState extends State<SettingScreen> {
               ),
             ),
           );
-          //not redirect but update the list in Home screen
-          
-
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

@@ -129,4 +129,12 @@ class MQTTService {
       onLogMessage('Unsubscribed from topic: $topic');
     }
   }
+
+  //unsubscribe from specific topics
+  void unsubscribeFromTopics(List<String> topics) {
+    for (var topic in topics) {
+      client.unsubscribe("/kiddotrac/$topic");
+      onLogMessage('Unsubscribed from topic: $topic');
+    }
+  }
 }
