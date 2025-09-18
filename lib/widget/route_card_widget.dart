@@ -104,7 +104,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
     //                       style: const TextStyle(
     //                         fontSize: 16,
     //                         fontWeight: FontWeight.bold,
-    //                         fontFamily: 'Poppins',
+    //                         fontFamily: 'Roboto',
     //                         color: Colors.black87,
     //                       ),
     //                     ),
@@ -138,7 +138,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
     //                         style: const TextStyle(
     //                           color: Colors.blue,
     //                           fontSize: 14,
-    //                           fontFamily: 'Poppins',
+    //                           fontFamily: 'Roboto',
     //                           fontWeight: FontWeight.w500,
     //                         ),
     //                       ),
@@ -173,7 +173,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
     //                         style: const TextStyle(
     //                           color: Colors.blue,
     //                           fontSize: 14,
-    //                           fontFamily: 'Poppins',
+    //                           fontFamily: 'Roboto',
     //                           fontWeight: FontWeight.w500,
     //                         ),
     //                       ),
@@ -240,7 +240,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
     //   ),
     // );
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      margin: const EdgeInsets.symmetric(vertical: 5),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -284,7 +284,6 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins',
                             color: Colors.black87,
                           ),
                         ),
@@ -314,7 +313,6 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                             style: const TextStyle(
                               color: Colors.blue,
                               fontSize: 14,
-                              fontFamily: 'Poppins',
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -349,7 +347,6 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                             style: const TextStyle(
                               color: Colors.blue,
                               fontSize: 14,
-                              fontFamily: 'Poppins',
                               fontWeight: FontWeight.w500,
                             ),
                           ),

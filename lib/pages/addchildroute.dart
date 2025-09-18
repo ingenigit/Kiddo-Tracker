@@ -147,11 +147,15 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
     }
   }
 
-  Widget _buildInstituteField() {
+  Widget _buildInstituteField(ColorScheme colorScheme) {
     return TextFormField(
       controller: _instituteController,
       decoration: InputDecoration(
         labelText: 'Institute',
+        prefixIcon: Icon(
+          Icons.school,
+          color: colorScheme.primary,
+        ),
         suffixIcon: IconButton(
           //check icon is search or clear
           icon: Icon(_searchIcon),
@@ -168,18 +172,52 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
             }
           },
         ),
-        border: OutlineInputBorder(),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: colorScheme.primary,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: colorScheme.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
       validator: (value) =>
           value == null || value.isEmpty ? 'Enter institute' : null,
     );
   }
 
-  Widget _buildRouteDropdown() {
+  Widget _buildRouteDropdown(ColorScheme colorScheme) {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
         labelText: 'Route No',
-        border: OutlineInputBorder(),
+        prefixIcon: Icon(
+          Icons.route,
+          color: colorScheme.primary,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: colorScheme.primary,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: colorScheme.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
       value: _selectedRoute,
       items: callback
@@ -226,14 +264,37 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
         });
       },
       validator: (value) => value == null ? 'Select a route' : null,
+      dropdownColor: colorScheme.surface,
+      style: TextStyle(color: colorScheme.onSurface),
     );
   }
 
-  Widget _buildTimeDropdown() {
+  Widget _buildTimeDropdown(ColorScheme colorScheme) {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
         labelText: 'Time',
-        border: OutlineInputBorder(),
+        prefixIcon: Icon(
+          Icons.access_time,
+          color: colorScheme.primary,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: colorScheme.primary,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: colorScheme.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
       value: _selectedTime,
       items: _times
@@ -251,14 +312,22 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
         });
       },
       validator: (value) => value == null ? 'Select a time' : null,
+      dropdownColor: colorScheme.surface,
+      style: TextStyle(color: colorScheme.onSurface),
     );
   }
 
-  Widget _buildStopageSelection() {
+  Widget _buildStopageSelection(ColorScheme colorScheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Select Stopage:', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+          'Select Stopage:',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: colorScheme.primary,
+          ),
+        ),
         ..._stopages.map(
           (stopage) => RadioListTile<String>(
             title: Text('${stopage['value']} ${stopage['time']}'),
@@ -271,6 +340,7 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
                 _stopageId = stopage['key'];
               });
             },
+            activeColor: colorScheme.primary,
           ),
         ),
         if (_selectedStopage == null)
@@ -285,7 +355,7 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(ColorScheme colorScheme) {
     return ElevatedButton(
       onPressed: () {
         if (_selectedStopage == null) {
@@ -296,29 +366,61 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
         }
         _submit();
       },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
       child: Text('Add Route'),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      appBar: AppBar(title: Text('New Route for ${widget.nickName}')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              _buildInstituteField(),
-              SizedBox(height: 16),
-              _buildRouteDropdown(),
-              SizedBox(height: 16),
-              _buildTimeDropdown(),
-              SizedBox(height: 16),
-              _buildStopageSelection(),
-              SizedBox(height: 20),
-              _buildSubmitButton(),
+              Text(
+                'New Route for ${widget.nickName}',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      _buildInstituteField(colorScheme),
+                      SizedBox(height: 16),
+                      _buildRouteDropdown(colorScheme),
+                      SizedBox(height: 16),
+                      _buildTimeDropdown(colorScheme),
+                      SizedBox(height: 16),
+                      _buildStopageSelection(colorScheme),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildSubmitButton(colorScheme),
             ],
           ),
         ),
@@ -371,26 +473,81 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
   void _showInstituteDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Select Institute'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: _institutes!.map((institute) {
-            return ListTile(
-              title: Text(institute['schoolname']),
-              subtitle: Text(institute['tsp_id']),
-              onTap: () {
-                setState(() {
-                  _selectedInstitute = institute['tsp_id'];
-                  _instituteController.text = institute['schoolname'];
-                  //after select change the search icon to clear icon
-                  _searchIcon = Icons.clear;
-                  _getrouteListBytsp();
-                });
-                Navigator.pop(context);
-              },
-            );
-          }).toList(),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Institute',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _institutes!.length,
+                    itemBuilder: (context, index) {
+                      var institute = _institutes![index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.school,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          title: Text(
+                            institute['schoolname'],
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          subtitle: Text(
+                            institute['tsp_id'],
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            ),
+                          ),
+                          onTap: () {
+                            setState(() {
+                              _selectedInstitute = institute['tsp_id'];
+                              _instituteController.text = institute['schoolname'];
+                              //after select change the search icon to clear icon
+                              _searchIcon = Icons.clear;
+                              _getrouteListBytsp();
+                            });
+                            Navigator.pop(context);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

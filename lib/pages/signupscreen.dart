@@ -13,7 +13,6 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _userIdController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
@@ -21,12 +20,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _mobileController = TextEditingController();
-  final TextEditingController _wardsController = TextEditingController();
-  final TextEditingController _statusController = TextEditingController();
 
   @override
   void dispose() {
-    _userIdController.dispose();
     _nameController.dispose();
     _cityController.dispose();
     _stateController.dispose();
@@ -34,8 +30,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _contactController.dispose();
     _emailController.dispose();
     _mobileController.dispose();
-    _wardsController.dispose();
-    _statusController.dispose();
     super.dispose();
   }
 
@@ -46,7 +40,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           .post(
             'ktrackusersignup',
             data: {
-              'userid': _userIdController.text,
+              'userid': _contactController.text,
               'name': _nameController.text,
               'city': _cityController.text,
               'state': _stateController.text,
@@ -54,8 +48,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
               'contact': _contactController.text,
               'email': _emailController.text,
               'mobile': _mobileController.text,
-              'wards': _wardsController.text,
-              'status': _statusController.text,
+              'wards': "",
+              'status': "",
             },
           )
           .then((response) {
@@ -90,6 +84,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required String label,
     required TextEditingController controller,
     TextInputType? keyboardType,
+    IconData? icon,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -98,6 +93,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
+          prefixIcon: icon != null ? Icon(icon) : null,
           border: const OutlineInputBorder(),
         ),
         validator: (value) =>
@@ -114,29 +110,92 @@ class _SignUpScreenState extends State<SignUpScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView(
-            children: [
-              _buildTextField(label: 'User ID', controller: _userIdController),
-              _buildTextField(label: 'Name', controller: _nameController),
-              _buildTextField(label: 'City', controller: _cityController),
-              _buildTextField(label: 'State', controller: _stateController),
-              _buildTextField(label: 'Address', controller: _addressController),
-              _buildTextField(label: 'Contact', controller: _contactController),
-              _buildTextField(
-                label: 'Email',
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              _buildTextField(
-                label: 'Mobile',
-                controller: _mobileController,
-                keyboardType: TextInputType.phone,
-              ),
-              _buildTextField(label: 'Wards', controller: _wardsController),
-              _buildTextField(label: 'Status', controller: _statusController),
-              const SizedBox(height: 20),
-              ElevatedButton(onPressed: _submit, child: const Text('Sign Up')),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  'Create Your Account',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                Card(
+                  elevation: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTextField(
+                          label: 'Name',
+                          controller: _nameController,
+                          icon: Icons.person,
+                        ),
+                        _buildTextField(
+                          label: 'Mobile No.',
+                          controller: _contactController,
+                          icon: Icons.phone,
+                        ),
+                        _buildTextField(
+                          label: 'Email',
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          icon: Icons.email,
+                        ),
+                        _buildTextField(
+                          label: 'Other Number',
+                          controller: _mobileController,
+                          keyboardType: TextInputType.phone,
+                          icon: Icons.phone_android,
+                        ),
+                        _buildTextField(
+                          label: 'Address',
+                          controller: _addressController,
+                          icon: Icons.home,
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTextField(
+                                label: 'City',
+                                controller: _cityController,
+                                keyboardType: TextInputType.streetAddress,
+                                icon: Icons.location_city,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildTextField(
+                                label: 'State',
+                                controller: _stateController,
+                                icon: Icons.map,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _submit,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Sign Up',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

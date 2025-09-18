@@ -56,9 +56,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
   // Helper method to get status icon
   Icon _getStatusIcon(String status) {
     switch (status.toLowerCase()) {
-      case 'picked up':
+      case 'onboarded':
         return const Icon(Icons.check_circle, color: Colors.green);
-      case 'dropped off':
+      case 'offboarded':
         return const Icon(Icons.home, color: Colors.blue);
       default:
         return const Icon(Icons.access_time, color: Colors.grey);
@@ -88,7 +88,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
   }
 
   // Helper method to get address from lat,long
-  Future<String> _getAddress(String location) async {
+  Future<String> _getAddress(
+    String onLocation,
+    String offLocation,
+    String status,
+  ) async {
+    String location = status == 'onboarded' ? onLocation : offLocation;
     try {
       List<String> parts = location.split(',');
       if (parts.length == 2) {
@@ -97,7 +102,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
         List<Placemark> placemarks = await placemarkFromCoordinates(lat, long);
         if (placemarks.isNotEmpty) {
           Placemark place = placemarks[0];
-          return '${place.street ?? ''}, ${place.locality ?? ''}, ${place.country ?? ''}'.trim();
+          return '${place.street ?? ''}, ${place.locality ?? ''}, ${place.country ?? ''}'
+              .trim();
         }
       }
     } catch (e) {
@@ -118,36 +124,49 @@ class _ActivityScreenState extends State<ActivityScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : activities.isEmpty
-              ? const Center(child: Text('No activities found.'))
-              : ListView(
-                  children: () {
-                    List<String> sortedKeys = groupedActivities.keys.toList()
-                      ..sort((a, b) => b.compareTo(a)); // descending date order
-                    return sortedKeys.map((dateKey) {
-                      DateTime? date;
-                      try {
-                        date = DateFormat('yyyy-MM-dd').parse(dateKey);
-                      } catch (_) {
-                        date = null;
-                      }
-                      String formattedDate = date != null
-                          ? DateFormat('MMMM dd, yyyy').format(date)
-                          : dateKey;
+          ? const Center(child: Text('No activities found.'))
+          : RefreshIndicator(
+              onRefresh: _fetchActivities,
+              child: ListView(
+                children: () {
+                  List<String> sortedKeys = groupedActivities.keys.toList()
+                    ..sort((a, b) => b.compareTo(a)); // descending date order
+                  return sortedKeys.map((dateKey) {
+                    DateTime? date;
+                    try {
+                      date = DateFormat('yyyy-MM-dd').parse(dateKey);
+                    } catch (_) {
+                      date = null;
+                    }
+                    String formattedDate = date != null
+                        ? DateFormat('MMMM dd, yyyy').format(date)
+                        : dateKey;
 
-                      List<Widget> dateSection = [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: Text(
-                            formattedDate,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    List<Widget> dateSection = [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          formattedDate,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey,
                           ),
                         ),
-                      ];
+                      ),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        indent: 16,
+                        endIndent: 16,
+                      ),
+                    ];
 
-                      dateSection.addAll(groupedActivities[dateKey]!.map((activity) {
+                    dateSection.addAll(
+                      groupedActivities[dateKey]!.map((activity) {
                         return Card(
                           margin: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -159,19 +178,49 @@ class _ActivityScreenState extends State<ActivityScreen> {
                               '${activity['student_name'] ?? 'Unknown'} - ${activity['status'] ?? 'No status'}',
                             ),
                             subtitle: FutureBuilder<String>(
-                              future: _getAddress(activity['location'] ?? ''),
+                              future: _getAddress(
+                                activity['on_location'],
+                                activity['off_location'],
+                                activity['status'],
+                              ),
                               builder: (context, snapshot) {
-                                String address = snapshot.connectionState == ConnectionState.done && snapshot.hasData
-                                    ? snapshot.data!
-                                    : (activity['location'] ?? 'N/A');
+                                String address = snapshot.data ?? '';
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Location: $address'),
-                                    Text('Route ID: ${activity['route_id'] ?? 'N/A'}'),
-                                    Text('Operator ID: ${activity['oprid'] ?? 'N/A'}'),
-                                    Text(
-                                      'Created: ${_formatTime(activity['created_at'] ?? '')}',
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.location_on, size: 16),
+                                        const SizedBox(width: 4),
+                                        Expanded(child: Text(address)),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.route, size: 16),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Route: ${activity['route_id'] ?? 'N/A'}',
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.person, size: 16),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Operator: ${activity['oprid'] ?? 'N/A'}',
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.access_time, size: 16),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Created: ${_formatTime(activity['created_at'] ?? '')}',
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 );
@@ -181,15 +230,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             tileColor: _getCardColor(activity['status'] ?? ''),
                           ),
                         );
-                      }));
+                      }),
+                    );
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: dateSection,
-                      );
-                    }).toList();
-                  }(),
-                ),
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: dateSection,
+                    );
+                  }).toList();
+                }(),
+              ),
+            ),
     );
   }
 }

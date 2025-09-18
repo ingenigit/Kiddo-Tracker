@@ -8,11 +8,13 @@ import 'package:logger/logger.dart';
 class ChildrenProvider with ChangeNotifier {
   List<Child> _children = [];
   Map<String, SubscriptionPlan> _studentSubscriptions = {};
+  List<Map<String, dynamic>> activities = [];
   final SqfliteHelper _sqfliteHelper = SqfliteHelper();
 
   List<Child> get children => _children;
   Map<String, SubscriptionPlan> get studentSubscriptions =>
       _studentSubscriptions;
+  List<Map<String, dynamic>> get activitiesList => activities;
 
   Future<void> updateChildren() async {
     try {
@@ -68,5 +70,15 @@ class ChildrenProvider with ChangeNotifier {
     }
 
     mqttService.subscribeToTopics(topics);
+  }
+
+  Future<void> updateActivity() async {
+    try {
+      final activityMaps = await _sqfliteHelper.getActivities();
+      activities = activityMaps.map((map) => map).toList();
+      notifyListeners();
+    } catch (e) {
+      Logger().e('Error updating children: $e');
+    }
   }
 }

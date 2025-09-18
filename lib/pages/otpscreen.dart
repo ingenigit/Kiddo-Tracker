@@ -14,7 +14,6 @@ class OTPScreen extends StatefulWidget {
 }
 
 class _OTPScreenState extends State<OTPScreen> {
-  
   final List<TextEditingController> _controllers = List.generate(
     6,
     (_) => TextEditingController(),
@@ -55,16 +54,16 @@ class _OTPScreenState extends State<OTPScreen> {
       // if (response.statusCode == 200) {
       //   logger.i(response.toString());
       //   if (response.data[0]['result'] == 'ok') {
-          // call another method
-          _fetchChildren();
-        //   ScaffoldMessenger.of(context).showSnackBar(
-        //     const SnackBar(content: Text('OTP verified successfully')),
-        //   );
-        // } else if (response.data[0]['result'] == 'Invaild OTP') {
-        //   ScaffoldMessenger.of(
-        //     context,
-        //   ).showSnackBar(const SnackBar(content: Text('Invaild OTP')));
-        // }
+      // call another method
+      _fetchChildren();
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     const SnackBar(content: Text('OTP verified successfully')),
+      //   );
+      // } else if (response.data[0]['result'] == 'Invaild OTP') {
+      //   ScaffoldMessenger.of(
+      //     context,
+      //   ).showSnackBar(const SnackBar(content: Text('Invaild OTP')));
+      // }
       // } else {
       //   ScaffoldMessenger.of(context).showSnackBar(
       //     SnackBar(
@@ -112,7 +111,6 @@ class _OTPScreenState extends State<OTPScreen> {
                   style: TextStyle(
                     color: Color(0xFF755DC1),
                     fontSize: 24,
-                    fontFamily: 'Poppins',
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -122,7 +120,6 @@ class _OTPScreenState extends State<OTPScreen> {
                   style: TextStyle(
                     color: Color(0xFF837E93),
                     fontSize: 16,
-                    fontFamily: 'Poppins',
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -189,7 +186,6 @@ class _OTPScreenState extends State<OTPScreen> {
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
-                              fontFamily: 'Poppins',
                               fontWeight: FontWeight.w600,
                             ),
                           ),

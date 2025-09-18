@@ -28,7 +28,6 @@ class MqttStatusWidget extends StatelessWidget {
               color: mqttStatus == 'Connected'
                   ? Colors.green.shade800
                   : Colors.red.shade800,
-              fontFamily: 'Poppins',
             ),
           ),
         ],

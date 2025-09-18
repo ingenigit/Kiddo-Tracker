@@ -94,7 +94,6 @@ class _ChildCardWidgetState extends State<ChildCardWidget> {
           style: TextStyle(
             color: statusColor,
             fontSize: 14,
-            fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -111,7 +110,6 @@ class _ChildCardWidgetState extends State<ChildCardWidget> {
           style: TextStyle(
             color: Colors.blue,
             fontSize: 14,
-            fontFamily: 'Poppins',
             decoration: TextDecoration.underline,
           ),
         ),
@@ -128,7 +126,6 @@ class _ChildCardWidgetState extends State<ChildCardWidget> {
             style: TextStyle(
               color: Colors.blue,
               fontSize: 14,
-              fontFamily: 'Poppins',
               decoration: TextDecoration.underline,
             ),
           ),
@@ -141,7 +138,6 @@ class _ChildCardWidgetState extends State<ChildCardWidget> {
             style: TextStyle(
               color: Colors.blue,
               fontSize: 14,
-              fontFamily: 'Poppins',
               decoration: TextDecoration.underline,
             ),
           ),
@@ -178,7 +174,6 @@ class _ChildCardWidgetState extends State<ChildCardWidget> {
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
-                      fontFamily: 'Poppins',
                     ),
                   ),
                 ),
@@ -192,7 +187,6 @@ class _ChildCardWidgetState extends State<ChildCardWidget> {
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
-                          fontFamily: 'Poppins',
                           color: Colors.black87,
                         ),
                       ),
@@ -202,14 +196,12 @@ class _ChildCardWidgetState extends State<ChildCardWidget> {
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
-                          fontFamily: 'Poppins',
                         ),
                       ),
                     ],
                   ),
                 ),
-                if (widget.child.status == 1 ||
-                    widget.subscription!.student_id == widget.child.studentId)
+                if (widget.child.status == 1 || widget.subscription != null && widget.subscription!.student_id == widget.child.studentId)
                   _buildStatusWidget()
                 else
                   _buildSubscriptionWidget(),
@@ -254,7 +246,6 @@ class _ChildCardWidgetState extends State<ChildCardWidget> {
                 child: const Text(
                   'Add Route',
                   style: TextStyle(
-                    fontFamily: 'Poppins',
                     fontSize: 14,
                     color: Colors.white,
                   ),

@@ -46,7 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     color: Color(0xFF755DC1),
                     fontSize: 24,
-                    fontFamily: 'Poppins',
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -56,7 +55,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     color: Color(0xFF837E93),
                     fontSize: 16,
-                    fontFamily: 'Poppins',
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -75,7 +73,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelStyle: const TextStyle(
                             color: Color(0xFF755DC1),
                             fontSize: 16,
-                            fontFamily: 'Poppins',
                             fontWeight: FontWeight.w500,
                           ),
                           prefixIcon: const Icon(
@@ -151,7 +148,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
-                                  fontFamily: 'Poppins',
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -177,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           //   style: TextStyle(
                           //     color: Colors.white,
                           //     fontSize: 18,
-                          //     fontFamily: 'Poppins',
+                          //     fontFamily: 'Roboto',
                           //     fontWeight: FontWeight.w600,
                           //   ),
                           // ),

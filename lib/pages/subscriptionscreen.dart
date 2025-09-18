@@ -128,26 +128,87 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 final pkg = _packages[index];
                 return Card(
                   margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 4,
+                  shadowColor: Colors.grey.withOpacity(0.3),
                   child: Padding(
                     padding: EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Icon(Icons.card_membership, color: Colors.blueGrey, size: 28),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                pkg.plan_name,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blueGrey.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
                         Text(
-                          pkg.plan_name,
+                          'Price: \$${pkg.price.toStringAsFixed(2)}',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey.shade700,
                           ),
                         ),
-                        SizedBox(height: 8),
-                        Text(pkg.plan_details),
-                        SizedBox(height: 8),
-                        Text('Price: \$${pkg.price.toStringAsFixed(2)}'),
                         SizedBox(height: 12),
+                        Text(
+                          'Features:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blueGrey.shade600,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: pkg.plan_details
+                              .split(',')
+                              .map((feature) => Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(Icons.check_circle, size: 16, color: Colors.blueGrey.shade400),
+                                      SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          feature.trim(),
+                                          style: TextStyle(fontSize: 14, color: Colors.blueGrey.shade600),
+                                        ),
+                                      ),
+                                    ],
+                                  ))
+                              .toList(),
+                        ),
+                        SizedBox(height: 16),
                         ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueGrey.shade700,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
                           onPressed: () => _selectPackage(pkg),
-                          child: Text('Select & Pay'),
+                          child: Center(
+                            child: Text(
+                              'Select & Pay',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
                         ),
                       ],
                     ),

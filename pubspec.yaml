@@ -1,6 +1,6 @@
 name: kiddo_tracker
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
@@ -37,9 +37,11 @@ flutter:
   assets:
     - assets/images/kt_logo.png
   fonts:
-    - family: Poppins
+    - family: Roboto
       fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
 
 # flutter_launcher_icons
 flutter_icons:

@@ -18,6 +18,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
   String userName = '';
   String mobileNumber = '';
+  String Address = '';
   String session = '';
   List<Map<String, dynamic>> children = [];
 
@@ -38,6 +39,7 @@ class _SettingScreenState extends State<SettingScreen> {
   void clearAllData() {
     userName = '';
     mobileNumber = '';
+    Address = '';
     session = '';
     children = [];
   }
@@ -48,61 +50,260 @@ class _SettingScreenState extends State<SettingScreen> {
     setState(() {
       userName = users[0]['name'];
       mobileNumber = users[0]['mobile'];
+      Address = users[0]['address'];
       session = users[0]['sessionid'];
       this.children = List.from(children);
     });
   }
 
+  bool darkMode = false;
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ListView(
-            children: [
-              Text('User Name: $userName'),
-              SizedBox(height: 8),
-              Text('Mobile Number: $mobileNumber'),
-              SizedBox(height: 16),
-              Text('Children:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ...children.asMap().entries.map((entry) {
-                int idx = entry.key;
-                var child = entry.value;
-                return Card(
-                  child: ListTile(
-                    title: Text('${child['name']}'),
-                    subtitle: Text('Age: ${child['age']}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.edit),
-                          onPressed: () => editChild(idx),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete),
-                          onPressed: () => deleteChild(idx),
-                        ),
-                      ],
+    return Scaffold(
+      // appBar: AppBar(
+      //   title: Text('Settings'),
+      //   backgroundColor: Theme.of(context).primaryColor,
+      //   foregroundColor: Colors.white,
+      // ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
+          children: [
+            // User Profile Section
+            Text(
+              'User Profile',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            Divider(
+              thickness: 2,
+              color: Theme.of(context).primaryColor.withOpacity(0.5),
+            ),
+            SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                SizedBox(width: 5),
+                Icon(
+                  Icons.person_4_outlined,
+                  color: Theme.of(context).primaryColor,
+                  size: 35,
+                ),
+                SizedBox(width: 10),
+                Text(
+                  userName.isNotEmpty ? 'Suman Bahadur Shrestha' : 'Loading...',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 25,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity( 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.phone,
+                    size: 30,
+                    color: Colors.white,
+                  ),
+                ),
+                title: Text('Mobile'),
+                subtitle: Text(mobileNumber),
+              ),
+              // ),
+            ),
+            SizedBox(height: 8),
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading:Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity( 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.location_on,
+                    size: 30,
+                    color: Colors.white,
+                  ),
+                ),
+                title: Text('Address'),
+                subtitle: Text(Address),
+              ),
+            ),
+            SizedBox(height: 30),
+            // Children Section
+            Text(
+              'Children',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            Divider(
+              thickness: 2,
+              color: Theme.of(context).primaryColor.withOpacity(0.5),
+            ),
+            // SizedBox(height: 10),
+            // Text(
+            //   'Total Children: ${children.length}',
+            //   style: TextStyle(
+            //     fontSize: 16,
+            //     fontWeight: FontWeight.w500,
+            //     color: Theme.of(context).primaryColorDark,
+            //   ),
+            // ),
+            // SizedBox(height: 15),
+            ...children.asMap().entries.map((entry) {
+              int idx = entry.key;
+              var child = entry.value;
+              return Card(
+                elevation: 4,
+                margin: EdgeInsets.symmetric(vertical: 5, horizontal: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).primaryColorLight,
+                    child: Text(
+                      child['name'][0].toUpperCase(),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                );
-              }),
-              SizedBox(height: 16),
-              //   SwitchListTile(
-              //     title: Text('Dark Mode'),
-              //     value: darkMode,
-              //     onChanged: (val) {
-              //       setState(() {
-              //         darkMode = val;
-              //       });
-              //     },
-              //   ),
-            ],
-          ),
+                  title: Text(
+                    child['name'],
+                    style: TextStyle(fontWeight: FontWeight.w300, fontSize: 16),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Age: ${child['age']}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        'School: ${child['school']}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        'Class: ${child['class_name']}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit, color: Colors.blueAccent),
+                        onPressed: () => editChild(idx),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete, color: Colors.redAccent),
+                        onPressed: () => _confirmDeleteChild(idx),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            SizedBox(height: 30),
+            // Preferences Section
+            Text(
+              'Preferences',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            Divider(
+              thickness: 2,
+              color: Theme.of(context).primaryColor.withOpacity(0.5),
+            ),
+            SizedBox(height: 10),
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SwitchListTile(
+                title: Text('Dark Mode'),
+                value: darkMode,
+                onChanged: (val) {
+                  setState(() {
+                    darkMode = val;
+                  });
+                },
+                secondary: AnimatedSwitcher(
+                  duration: Duration(milliseconds: 300),
+                  child: Icon(
+                    darkMode ? Icons.dark_mode : Icons.light_mode,
+                    key: ValueKey<bool>(darkMode),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  void _confirmDeleteChild(int idx) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Child'),
+          content: Text('Are you sure you want to delete this child?'),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+              onPressed: () {
+                Navigator.of(context).pop();
+                deleteChild(idx);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -111,10 +312,7 @@ class _SettingScreenState extends State<SettingScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddChildScreen(
-          childData: child,
-          isEdit: true,
-        ),
+        builder: (context) => AddChildScreen(childData: child, isEdit: true),
       ),
     ).then((value) {
       // Refresh the list after returning from AddChildScreen
@@ -149,7 +347,10 @@ class _SettingScreenState extends State<SettingScreen> {
           setState(() {
             children.removeAt(idx);
           });
-          Provider.of<ChildrenProvider>(context, listen: false).updateChildren();
+          Provider.of<ChildrenProvider>(
+            context,
+            listen: false,
+          ).updateChildren();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(

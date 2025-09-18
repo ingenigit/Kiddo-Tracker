@@ -10,7 +10,6 @@ import 'package:kiddo_tracker/model/route.dart';
 import 'package:kiddo_tracker/mqtt/MQTTService.dart';
 import 'package:kiddo_tracker/routes/routes.dart';
 import 'package:kiddo_tracker/services/children_provider.dart';
-import 'package:kiddo_tracker/services/children_service.dart';
 import 'package:kiddo_tracker/services/notification_service.dart';
 import 'package:kiddo_tracker/services/permission_service.dart';
 import 'package:kiddo_tracker/widget/child_card_widget.dart';
@@ -293,6 +292,9 @@ class _HomeScreenState extends State<HomeScreen>
     final childIndex = children.indexWhere(
       (child) => child.studentId == studentId,
     );
+    String onBoardLocation = "";
+    String offBoardLocation = "";
+
     if (childIndex != -1) {
       // Show a notification
       NotificationService.showNotification(
@@ -301,12 +303,19 @@ class _HomeScreenState extends State<HomeScreen>
         body:
             'Child ${children[childIndex].name} has been ${status == 1 ? 'onboarded' : 'offboarded'}.',
       );
+      //set location base on jsonMessage['data']['msgtype']
+      if (status == 1) {
+        onBoardLocation = jsonMessage['data']['location'];
+      } else if (status == 2) {
+        offBoardLocation = jsonMessage['data']['location'];
+      }
       //save to database
       _sqfliteHelper.insertActivity({
         'student_id': studentId,
         'student_name': children[childIndex].name,
         'status': status == 1 ? 'onboarded' : 'offboarded',
-        'location': jsonMessage['data']['location'],
+        'on_location': onBoardLocation,
+        'off_location': offBoardLocation,
         'route_id': jsonMessage['devid'].split('_')[0],
         'oprid': jsonMessage['devid'].split('_')[1],
       });
@@ -314,6 +323,8 @@ class _HomeScreenState extends State<HomeScreen>
       // Update the status of the child
       Logger().i('Updating status for child $studentId to $status');
       provider.updateChildOnboardStatus(studentId, status);
+      //update the ActivityScreen after data insert in database
+      provider.updateActivity();
       if (status == 1 || status == 2) {
         setState(() {
           _boardRefreshKey++;
@@ -450,6 +461,28 @@ class _HomeScreenState extends State<HomeScreen>
     final userId = await SharedPreferenceHelper.getUserNumber();
     final sessonId = await SharedPreferenceHelper.getUserSessionId();
     final oprId = routes.first.oprId;
+    // Show confirmation dialog
+    bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Delete'),
+          content: const Text('Are you sure you want to delete this route?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+
     Logger().i(
       'Delete tapped for route $routeId, userId: $userId, oprId: $oprId, sessonId: $sessonId',
     );
