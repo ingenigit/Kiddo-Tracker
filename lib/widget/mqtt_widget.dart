@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:kiddo_tracker/mqtt/MQTTService.dart';
 import 'package:kiddo_tracker/widget/mqtt_status_widget.dart';
-import 'package:logger/logger.dart';
 
 class MqttWidget extends StatefulWidget {
   final Function(String) onMessageReceived;

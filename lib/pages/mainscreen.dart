@@ -15,6 +15,13 @@ class _MainScreenState extends State<MainScreen> {
   //default
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
+  int _notificationCount = 0;
+
+  void incrementNotificationCount() {
+    setState(() {
+      _notificationCount++;
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -34,8 +41,51 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('Kiddo Tracker'),
-        centerTitle: true,
+        //show app logo
+        title: Image.asset('assets/images/kt_logo.png', height: 30),
+        // title: const Text('Kiddo Tracker'),
+        //notification icon with default badge count is 0 and clickable to navigate to alerts screen
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                tooltip: 'Alerts',
+                iconSize: 24,
+                splashRadius: 20,
+                onPressed: () {
+                  setState(() {
+                    _notificationCount = 0;
+                  });
+                  _onItemTapped(2);
+                },
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    _notificationCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: PageView(
         controller: _pageController,
@@ -46,10 +96,9 @@ class _MainScreenState extends State<MainScreen> {
           });
         },
         children: [
-          const HomeScreen(),
+          HomeScreen(onNewMessage: incrementNotificationCount),
           const AddChildScreen(),
           const ActivityScreen(),
-          const Center(child: Text('Alerts Screen')),
           SettingScreen(),
         ],
       ),
@@ -61,10 +110,6 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.child_care), label: 'Child'),
           BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Activities'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Alerts',
-          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',

@@ -222,6 +222,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               userid: userNumber ?? '',
             ),
           );
+          //update child table status
+          await SqfliteHelper().updateChildStatus(widget.childid ?? '', 1);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(

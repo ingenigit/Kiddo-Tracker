@@ -3,9 +3,7 @@ import 'package:kiddo_tracker/model/child.dart';
 import 'package:kiddo_tracker/model/parent.dart';
 import 'package:kiddo_tracker/model/route.dart';
 import 'package:kiddo_tracker/model/subscribe.dart';
-import 'package:kiddo_tracker/services/children_provider.dart';
 import 'package:logger/logger.dart';
-import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -26,8 +24,9 @@ class SqfliteHelper {
     String path = join(await getDatabasesPath(), 'kiddo_tracker.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      // onUpgrade: _onUpgrade,
       readOnly: false,
     );
   }
@@ -65,25 +64,25 @@ class SqfliteHelper {
       gender TEXT,
       tag_id TEXT,
       route_info TEXT,
+      tsp_id TEXT,
       status INTEGER,
       onboard_status INTEGER
       )
     ''');
 
-    //route of child table
-    // await db.execute('''
-    //   CREATE TABLE route(
-    //     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    //     route_id TEXT,
-    //     route_name TEXT,
-    //     oprid TEXT,
-    //     vehicle_id TEXT,
-    //     stop_id TEXT,
-    //     stop_name TEXT,
-    //     stop_arrival_time TEXT,
-    //     FOREIGN KEY(child_id) REFERENCES child(id) ON DELETE CASCADE
-    //   )
-    // ''');
+    //routes table
+    await db.execute('''
+      CREATE TABLE routes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        route_id TEXT,
+        timing TEXT,
+        oprid INTEGER,
+        route_name TEXT,
+        type INTEGER,
+        stop_list TEXT,
+        vehicle_id TEXT
+      )
+    ''');
 
     //set the message activity
     await db.execute('''
@@ -92,7 +91,8 @@ class SqfliteHelper {
       student_id TEXT,
       student_name TEXT,
       status TEXT,
-      location TEXT,
+      on_location TEXT,
+      off_location TEXT,
       route_id TEXT,
       oprid TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -146,20 +146,30 @@ class SqfliteHelper {
     Logger().i(results);
     String onboardTime = '_';
     String offboardTime = '_';
+    String onLocation = '_';
+    String offLocation = '_';
 
     // Sort results by created_at descending to get the latest
     List<Map<String, dynamic>> sortedResults = List.from(results);
     sortedResults.sort((a, b) => b['created_at'].compareTo(a['created_at']));
 
     for (var row in sortedResults) {
-      if (row['status'] == 'onboarded' && onboardTime == '_') {
+      //load if onboarded == '_' or override if not '_'
+      if (row['status'] == 'onboarded') {
         onboardTime = row['created_at'].toString();
-      } else if (row['status'] == 'offboarded' && offboardTime == '_') {
+        onLocation = row['on_location'];
+      } else if (row['status'] == 'offboarded') {
         offboardTime = row['created_at'].toString();
+        offLocation = row['off_location'];
       }
     }
 
-    return {'onboardTime': onboardTime, 'offboardTime': offboardTime};
+    return {
+      'onboardTime': onboardTime,
+      'offboardTime': offboardTime,
+      'onLocation': onLocation,
+      'offLocation': offLocation,
+    };
   }
 
   // User CRUD
@@ -205,6 +215,14 @@ class SqfliteHelper {
     );
   }
 
+  //get child tsp_id in list
+  //also handle ["OD115856"] formate also the duplicate data too
+  Future<List<String>> getChildTspId() async {
+    final dbClient = await db;
+    final results = await dbClient.query('child', columns: ['tsp_id'], distinct: true);
+    return results.map((e) => e['tsp_id'] as String).where((element) => element.isNotEmpty).toList();
+  }
+
   //get route_info by student_id
   Future<String?> getRouteInfoByStudentId(String studentId) async {
     final dbClient = await db;
@@ -218,6 +236,17 @@ class SqfliteHelper {
       return results.first['route_info'] as String?;
     }
     return null;
+  }
+
+  //update child status
+  Future<int> updateChildStatus(String studentId, int status) async {
+    final dbClient = await db;
+    return await dbClient.update(
+      'child',
+      {'status': status},
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+    );
   }
 
   //get all routes in String array oprid base on student_id from child table
@@ -341,6 +370,36 @@ class SqfliteHelper {
       client.execute('DELETE FROM child;');
       client.execute('DELETE FROM activityStatus;');
       client.execute('DELETE FROM studentSubscriptions;');
+      client.execute('DELETE FROM routes;');
     });
+  }
+
+  //insert route
+  void insertRoute(item, item2, item3, item4, item5, item6, item7) {
+    //insert route into routes table
+    db.then((client) {
+      client.insert('routes', {
+        'oprid': item,
+        'route_id': item2,
+        'timing': item3,
+        'vehicle_id': item4,
+        'route_name': item5,
+        'type': item6,
+        'stop_list': item7,
+      });
+    });
+  }
+
+  //get stop_list from route base on oprid and route_id
+  Future<List<Map<String, dynamic>>> getStopListByOprIdAndRouteId(
+    String oprId,
+    String routeId,
+  ) async {
+    final dbClient = await db;
+    return await dbClient.query(
+      'routes',
+      where: 'oprid = ? AND route_id = ?',
+      whereArgs: [oprId, routeId],
+    );
   }
 }

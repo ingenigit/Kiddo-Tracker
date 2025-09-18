@@ -4,14 +4,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:kiddo_tracker/api/api_service.dart';
+import 'package:kiddo_tracker/api/apimanage.dart';
 import 'package:kiddo_tracker/model/child.dart';
 import 'package:kiddo_tracker/model/route.dart';
-import 'package:kiddo_tracker/model/subscribe.dart';
 import 'package:kiddo_tracker/mqtt/MQTTService.dart';
 import 'package:kiddo_tracker/routes/routes.dart';
 import 'package:kiddo_tracker/services/children_provider.dart';
 import 'package:kiddo_tracker/services/children_service.dart';
-import 'package:kiddo_tracker/services/global_event.dart';
 import 'package:kiddo_tracker/services/notification_service.dart';
 import 'package:kiddo_tracker/services/permission_service.dart';
 import 'package:kiddo_tracker/widget/child_card_widget.dart';
@@ -25,7 +24,9 @@ import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onNewMessage;
+
+  const HomeScreen({super.key, this.onNewMessage});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -42,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen>
   late final Animation<double> _animation;
 
   late MQTTService _mqttService;
-  Completer<MQTTService> _mqttCompleter = Completer<MQTTService>();
+  final Completer<MQTTService> _mqttCompleter = Completer<MQTTService>();
 
   Map<String, bool> activeRoutes = {};
   int _boardRefreshKey = 0;
@@ -77,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen>
     await _fetchChildrenFromDb();
     await _mqttCompleter.future;
     await _subscribeToTopics();
+    //await _fetchRouteStoapge();
   }
 
   Future<void> _subscribeToTopics() async {
@@ -155,6 +157,10 @@ class _HomeScreenState extends State<HomeScreen>
                                               routes,
                                               child.studentId,
                                             ),
+                                        onOnboardTap: (routeId, routes) =>
+                                            _onOnboard(routeId, routes),
+                                        onOffboardTap: (routeId, routes) =>
+                                            _onOffboard(routeId, routes),
                                         onAddRouteTap: () => _onAddRoute(child),
                                         activeRoutes: activeRoutes,
                                         boardRefreshKey: _boardRefreshKey,
@@ -212,6 +218,8 @@ class _HomeScreenState extends State<HomeScreen>
     } catch (e) {
       Logger().e('Error parsing MQTT message: $e');
     }
+    //on every notificaion it will be called
+    widget.onNewMessage?.call();
   }
 
   void _handleOnboardMessage(
@@ -382,10 +390,6 @@ class _HomeScreenState extends State<HomeScreen>
         context,
         listen: false,
       ).updateChildren();
-
-      // After updating children, update MQTT subscriptions for new routes
-      final childrenService = ChildrenService();
-      await childrenService.subscribeToNewlyAddedChild(mqttService: _mqttService);
     }
   }
 
@@ -422,6 +426,13 @@ class _HomeScreenState extends State<HomeScreen>
       );
       Logger().i(responseLocation);
 
+      //get stop_list from database
+      final stopList = await _sqfliteHelper.getStopListByOprIdAndRouteId(
+        oprId,
+        routeId,
+      );
+      Logger().i('stopList: $stopList');
+
       final map = extractLocationAndRouteData(
         responseLocation,
         responseRouteDetail,
@@ -451,16 +462,15 @@ class _HomeScreenState extends State<HomeScreen>
         if (response.data[0]['result'] == 'ok') {
           if (response.data[1]['data'] == 'ok') {
             //Also remove from the database
-            await _sqfliteHelper.deleteRouteInfoByStudentIdAndOprId(studentId, oprId);
+            await _sqfliteHelper.deleteRouteInfoByStudentIdAndOprId(
+              studentId,
+              oprId,
+            );
             // Refresh the children list to show updated data
             await Provider.of<ChildrenProvider>(
               context,
               listen: false,
             ).updateChildren();
-
-            // After updating children, update MQTT subscriptions for removed routes
-            final childrenService = ChildrenService();
-            await childrenService.subscribeToNewlyAddedChild(mqttService: _mqttService);
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Delete tapped for route $routeId')),
@@ -484,5 +494,74 @@ class _HomeScreenState extends State<HomeScreen>
         contact2: map['contact2'] ?? '',
       ),
     );
+  }
+
+  //should be only after the children have been fetched
+  Future<void> _fetchRouteStoapge() async {
+    final userId = await SharedPreferenceHelper.getUserNumber();
+    final sessionId = await SharedPreferenceHelper.getUserSessionId();
+
+    final kkmklk = await _sqfliteHelper.getChildTspId();
+    Logger().i('kkmklk: $kkmklk');
+    List<String> kkmklk2 = [];
+    for (var item in kkmklk) {
+      if (item.isNotEmpty) {
+        try {
+          List<dynamic> decoded = jsonDecode(item);
+          kkmklk2.addAll(decoded.map((e) => e.toString()));
+        } catch (e) {
+          kkmklk2.add(item);
+        }
+      }
+    }
+    Logger().i('kkmklk2: $kkmklk2');
+    for (var tspId in kkmklk2) {
+      Logger().i('tspId: $tspId, userId: $userId, sessionId: $sessionId');
+      ApiManager()
+          .post(
+            'kturoutelistbytsp',
+            data: {'userid': userId, 'sessionid': sessionId, 'tsp_id': tspId},
+          )
+          .then((response) {
+            if (response.statusCode == 200) {
+              Logger().i(response.data);
+              if (response.data[0]['result'] == 'ok') {
+                if (response.data[2]['studentdata'] != null) {
+                  /*
+                  [
+                  {"result":"ok"},
+                  {"data":[
+                    {"oprid":44,"route_id":"OR76295500004","timing":"10:00:00","vehicle_id":"OD33AK9302","stop_details":[
+                      {"1":["Khandagiri","10:00","10:05","20.2568819,85.7791854"]},
+                      {"2":["Baramunda","10:10","10:11","20.2788292,85.7947875"]},
+                      {"3":["Fire Station Chowk","10:20","10:21","20.2797837,85.799151"]},
+                      {"4":["CRPF Square","10:28","10:30","20.2849144,85.80781859999999"]}
+                      ],
+                    "route_name":"Route 20","type":1, "stop_list":[
+                      {"stop_id":"1","stop_name":"Khandagiri","location":"20.2568819,85.7791854","stop_type":1},
+                      {"stop_id":"2","stop_name":"Baramunda","location":"20.2788292,85.7947875","stop_type":2},
+                      {"stop_id":"3","stop_name":"Fire Station Chowk","location":"20.2797837,85.799151","stop_type":2},
+                      {"stop_id":"4","stop_name":"CRPF Square","location":"20.2849144,85.80781859999999","stop_type":3}
+                    ]
+                  }
+                  ]
+                    */
+                  for (var item in response.data[2]['studentdata']) {
+                    //save in database
+                    _sqfliteHelper.insertRoute(
+                      item['oprid'],
+                      item['route_id'],
+                      item['timing'],
+                      item['vehicle_id'],
+                      item['route_name'],
+                      item['type'],
+                      item['stop_list'],
+                    );
+                  }
+                }
+              }
+            }
+          });
+    }
   }
 }

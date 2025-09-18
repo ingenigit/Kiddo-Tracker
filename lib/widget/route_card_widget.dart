@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:kiddo_tracker/model/route.dart';
 import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 
@@ -9,6 +10,8 @@ class RouteCardWidget extends StatefulWidget {
   final Function(String routeId, List<RouteInfo> routes)? onBusTap;
   final Function(String routeId, List<RouteInfo> routes)? onLocationTap;
   final Function(String routeId, List<RouteInfo> routes)? onDeleteTap;
+  final Function(String routeId, List<RouteInfo> routes)? onOnboardTap;
+  final Function(String routeId, List<RouteInfo> routes)? onOffboardTap;
   final Map<String, bool> activeRoutes;
   final int boardRefreshKey;
 
@@ -20,6 +23,8 @@ class RouteCardWidget extends StatefulWidget {
     required this.onBusTap,
     required this.onLocationTap,
     required this.onDeleteTap,
+    this.onOnboardTap,
+    this.onOffboardTap,
     required this.activeRoutes,
     required this.boardRefreshKey,
   });
@@ -60,6 +65,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
       setState(() {
         onboardTime = times['onboardTime'] ?? '_';
         offboardTime = times['offboardTime'] ?? '_';
+        final location = times['location'] ?? '_';
       });
     }
   }
@@ -238,7 +244,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(10.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -287,6 +293,12 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                   ),
                   const SizedBox(height: 12),
                   InkWell(
+                    onTap: onboardTime != null
+                        ? () => widget.onOnboardTap!(
+                            widget.routeId,
+                            widget.routes,
+                          )
+                        : null,
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -312,6 +324,12 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                   ),
                   const SizedBox(height: 8),
                   InkWell(
+                    onTap: widget.onOffboardTap != null
+                        ? () => widget.onOffboardTap!(
+                            widget.routeId,
+                            widget.routes,
+                          )
+                        : null,
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -388,7 +406,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
           ],
         ),
       ),
-    );
+    ).animate().fade(duration: 600.ms).slide(begin: const Offset(0, 0.1));
   }
 
   Color _getBusIconColor() {

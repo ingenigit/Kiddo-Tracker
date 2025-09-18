@@ -12,6 +12,7 @@ class Child {
   final String gender;
   final String tagId;
   final List<RouteInfo> routeInfo;
+  final List<String> tsp_id;
   final int status;
   final int onboard_status;
 
@@ -26,6 +27,7 @@ class Child {
     required this.gender,
     required this.tagId,
     required this.routeInfo,
+    required this.tsp_id,
     required this.status,
     required this.onboard_status,
   });
@@ -70,6 +72,7 @@ class Child {
       gender: json['gender'] ?? '',
       tagId: json['tag_id'] ?? '',
       routeInfo: routes,
+      tsp_id: json['tsp_id'] is String ? [json['tsp_id']] : json['tsp_id'],
       status: json['status'] is int
           ? json['status']
           : int.tryParse(json['status'].toString()) ?? 0,
@@ -92,6 +95,7 @@ class Child {
     'gender': gender,
     'tag_id': tagId,
     'route_info': jsonEncode(routeInfo.map((e) => e.toJson()).toList()),
+    'tsp_id': jsonEncode(tsp_id.map((e) => e).toList()),
     'status': status,
     'onboard_status': onboard_status,
   };

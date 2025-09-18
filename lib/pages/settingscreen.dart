@@ -5,7 +5,6 @@ import 'package:kiddo_tracker/services/children_provider.dart';
 import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
-import 'package:sqflite/sqflite.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});

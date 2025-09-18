@@ -4,9 +4,8 @@ import 'package:kiddo_tracker/model/child.dart';
 import 'package:kiddo_tracker/model/subscribe.dart';
 import 'package:kiddo_tracker/widget/route_card_widget.dart';
 import 'package:kiddo_tracker/model/route.dart';
-import 'package:logger/logger.dart';
 
-class ChildCardWidget extends StatelessWidget {
+class ChildCardWidget extends StatefulWidget {
   final Child child;
   final SubscriptionPlan? subscription;
   final VoidCallback? onSubscribeTap;
@@ -14,6 +13,8 @@ class ChildCardWidget extends StatelessWidget {
   final Function(String routeId, List<RouteInfo> routes)? onBusTap;
   final Function(String routeId, List<RouteInfo> routes)? onLocationTap;
   final Function(String routeId, List<RouteInfo> routes)? onDeleteTap;
+  final Function(String routeId, List<RouteInfo> routes)? onOnboardTap;
+  final Function(String routeId, List<RouteInfo> routes)? onOffboardTap;
   final Map<String, bool> activeRoutes;
   final int boardRefreshKey;
 
@@ -26,10 +27,17 @@ class ChildCardWidget extends StatelessWidget {
     required this.onBusTap,
     required this.onLocationTap,
     required this.onDeleteTap,
+    this.onOnboardTap,
+    this.onOffboardTap,
     required this.activeRoutes,
     required this.boardRefreshKey,
   });
 
+  @override
+  State<ChildCardWidget> createState() => _ChildCardWidgetState();
+}
+
+class _ChildCardWidgetState extends State<ChildCardWidget> {
   String _statusText(int status) {
     switch (status) {
       case 1:
@@ -52,155 +60,204 @@ class ChildCardWidget extends StatelessWidget {
     return grouped;
   }
 
+  String _getInitials(String name) {
+    List<String> names = name.split(' ');
+    String initials = '';
+    for (var part in names) {
+      if (part.isNotEmpty) {
+        initials += part[0].toUpperCase();
+      }
+    }
+    return initials;
+  }
+
+  Widget _buildStatusWidget() {
+    Icon statusIcon;
+    Color statusColor;
+    if (widget.child.onboard_status == 1) {
+      statusIcon = const Icon(
+        Icons.check_circle,
+        color: Colors.green,
+        size: 20,
+      );
+      statusColor = Colors.green;
+    } else {
+      statusIcon = const Icon(Icons.cancel, color: Colors.red, size: 20);
+      statusColor = Colors.red;
+    }
+    return Row(
+      children: [
+        statusIcon,
+        const SizedBox(width: 6),
+        Text(
+          _statusText(widget.child.onboard_status),
+          style: TextStyle(
+            color: statusColor,
+            fontSize: 14,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubscriptionWidget() {
+    if (widget.subscription == null) {
+      return GestureDetector(
+        onTap: widget.onSubscribeTap,
+        child: const Text(
+          "Subscribe",
+          style: TextStyle(
+            color: Colors.blue,
+            fontSize: 14,
+            fontFamily: 'Poppins',
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      );
+    } else {
+      bool isExpired = DateTime.parse(
+        widget.subscription!.enddate,
+      ).isBefore(DateTime.now());
+      if (widget.subscription!.student_id != widget.child.studentId) {
+        return GestureDetector(
+          onTap: widget.onSubscribeTap,
+          child: const Text(
+            "Subscribe",
+            style: TextStyle(
+              color: Colors.blue,
+              fontSize: 14,
+              fontFamily: 'Poppins',
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        );
+      } else if (isExpired) {
+        return GestureDetector(
+          onTap: widget.onSubscribeTap,
+          child: const Text(
+            "Add New Plan",
+            style: TextStyle(
+              color: Colors.blue,
+              fontSize: 14,
+              fontFamily: 'Poppins',
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        );
+      } else {
+        // For active subscription, just show a green check icon without text
+        return const Icon(Icons.check_circle, color: Colors.green, size: 20);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final groupedRoutes = _groupRoutesByRouteId(child.routeInfo);
+    final groupedRoutes = _groupRoutesByRouteId(widget.child.routeInfo);
 
     return Card(
       elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: Name, status, location icon
+            // Top row: Avatar, Name, School
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  child.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    fontFamily: 'Poppins',
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.blue.shade300,
+                  child: Text(
+                    _getInitials(widget.child.name),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      fontFamily: 'Poppins',
+                    ),
                   ),
                 ),
-                Row(
-                  children: [
-                    Builder(
-                      builder: (context) {
-                        if (subscription == null) {
-                          return GestureDetector(
-                            onTap: onSubscribeTap,
-                            child: const Text(
-                              "Subscribe",
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontSize: 14,
-                                fontFamily: 'Poppins',
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          );
-                        } else {
-                          bool isExpired = DateTime.parse(
-                            subscription!.enddate,
-                          ).isBefore(DateTime.now());
-                          Logger().i(isExpired);
-                          if (subscription!.student_id != child.studentId) {
-                            return GestureDetector(
-                              onTap: onSubscribeTap,
-                              child: const Text(
-                                "Subscribess",
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontSize: 14,
-                                  fontFamily: 'Poppins',
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            );
-                          } else if (isExpired) {
-                            return GestureDetector(
-                              onTap: onSubscribeTap,
-                              child: const Text(
-                                "Add New Plan",
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontSize: 14,
-                                  fontFamily: 'Poppins',
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            );
-                          }
-                          // else if (subscription!.student_id == child.studentId && child.status == 0) {
-                          //   return GestureDetector(
-                          //     child: const Text(
-                          //       "Plan Selected",
-                          //       style: TextStyle(
-                          //         color: Colors.green,
-                          //         fontSize: 14,
-                          //         fontFamily: 'Poppins',
-                          //         decoration: TextDecoration.underline,
-                          //       ),
-                          //     ),
-                          //   );
-                          // }
-                          else {
-                            return Text(
-                              _statusText(child.onboard_status),
-                              style: TextStyle(
-                                color: child.onboard_status == 1
-                                    ? Colors.green
-                                    : Colors.red,
-                                fontSize: 14,
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.bold,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.child.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          fontFamily: 'Poppins',
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.child.school,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                if (widget.child.status == 1 ||
+                    widget.subscription!.student_id == widget.child.studentId)
+                  _buildStatusWidget()
+                else
+                  _buildSubscriptionWidget(),
               ],
             ),
-            const SizedBox(height: 4),
-            // Unit info
-            Text(
-              child.school,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-                fontFamily: 'Poppins',
-              ),
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             // Route cards
             Column(
               children: groupedRoutes.entries.map((entry) {
                 final routeId = entry.key;
                 final routes = entry.value;
                 return RouteCardWidget(
-                  childId: child.studentId,
+                  childId: widget.child.studentId,
                   routeId: routeId,
                   routes: routes,
-                  onBusTap: onBusTap,
-                  onLocationTap: onLocationTap,
-                  onDeleteTap: onDeleteTap,
-                  activeRoutes: activeRoutes,
-                  boardRefreshKey: boardRefreshKey,
+                  onBusTap: widget.onBusTap,
+                  onLocationTap: widget.onLocationTap,
+                  onDeleteTap: widget.onDeleteTap,
+                  onOnboardTap: widget.onOnboardTap,
+                  onOffboardTap: widget.onOffboardTap,
+                  activeRoutes: widget.activeRoutes,
+                  boardRefreshKey: widget.boardRefreshKey,
                 );
               }).toList(),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             // Add Route button
             Align(
               alignment: Alignment.centerLeft,
               child: ElevatedButton(
-                onPressed: onAddRouteTap,
+                onPressed: widget.onAddRouteTap,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.lightBlue,
+                  backgroundColor: Colors.blue.shade600,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
                   ),
                 ),
                 child: const Text(
                   'Add Route',
-                  style: TextStyle(fontFamily: 'Poppins'),
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),

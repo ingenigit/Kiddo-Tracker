@@ -12,7 +12,7 @@ class RouteSearchCallback {
       routeTimingsMap = {},
       reqStatus = 0;
 
-  void call(dynamic response) {
+  Future<void> call(dynamic response) async {
     if (response == null || response is! List || response.length < 2) {
       reqStatus = -1;
       return;
@@ -39,10 +39,6 @@ class RouteSearchCallback {
         routeList.add(route);
         uniqueRouteIds.add(route.routeId);
         routeTimingsMap.putIfAbsent(route.routeId, () => []).add(route.timing);
-        // in database store
-        // route.routeId, route.timing, route.oprId, route.routeName, route.type, route.stopDetails, route.stopList, route.vehicleId
-        
-
       }
 
       reqStatus = 1;

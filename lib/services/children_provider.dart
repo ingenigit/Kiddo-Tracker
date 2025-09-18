@@ -47,6 +47,7 @@ class ChildrenProvider with ChangeNotifier {
         gender: _children[childIndex].gender,
         tagId: _children[childIndex].tagId,
         routeInfo: _children[childIndex].routeInfo,
+        tsp_id: _children[childIndex].tsp_id,
         status: _children[childIndex].status,
         onboard_status: status,
       );

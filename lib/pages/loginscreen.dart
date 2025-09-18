@@ -119,7 +119,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: ElevatedButton(
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
-                              callAPI();
+                              // callAPI();
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.otp,
+                                arguments: "8456029772",
+                              );
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -195,38 +200,40 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final mobileNumber = _mobileController.text;
-    ApiService.sendOTP(mobileNumber).then((response) {
-      setState(() {
-        _isLoading = false;
-      });
+    ApiService.sendOTP(mobileNumber)
+        .then((response) {
+          setState(() {
+            _isLoading = false;
+          });
 
-      if (response.statusCode == 200) {
-        if (response.data[0]['result'] == 'ok') {
-          // Success animation before navigation
-          Navigator.pushNamed(
+          if (response.statusCode == 200) {
+            if (response.data[0]['result'] == 'ok') {
+              // Success animation before navigation
+              Navigator.pushNamed(
+                context,
+                AppRoutes.otp,
+                arguments: mobileNumber,
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error: ${response.data['message']}')),
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to send OTP: ${response.statusMessage}'),
+              ),
+            );
+          }
+        })
+        .catchError((error) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(
             context,
-            AppRoutes.otp,
-            arguments: mobileNumber,
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${response.data['message']}')),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send OTP: ${response.statusMessage}'),
-          ),
-        );
-      }
-    }).catchError((error) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $error')));
-    });
+          ).showSnackBar(SnackBar(content: Text('Error: $error')));
+        });
   }
 }

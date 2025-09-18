@@ -6,9 +6,6 @@ import 'package:kiddo_tracker/widget/shareperference.dart';
 import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
-import 'package:provider/provider.dart';
-
-import '../routes/routes.dart';
 
 class AddChildScreen extends StatefulWidget {
   final Map<String, dynamic>? childData;
@@ -28,8 +25,15 @@ class _AddChildScreenState extends State<AddChildScreen> {
   final TextEditingController _schoolController = TextEditingController();
   final TextEditingController _classNameController = TextEditingController();
   final TextEditingController _rollNoController = TextEditingController();
-  final TextEditingController _stateController = TextEditingController();
+  // final TextEditingController _stateController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
+
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _nicknameFocus = FocusNode();
+  final FocusNode _schoolFocus = FocusNode();
+  final FocusNode _classFocus = FocusNode();
+  final FocusNode _rollNoFocus = FocusNode();
+  final FocusNode _ageFocus = FocusNode();
 
   String? gender;
 
@@ -42,7 +46,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
       _schoolController.text = widget.childData!['school'] ?? '';
       _classNameController.text = widget.childData!['class_name'] ?? '';
       _rollNoController.text = widget.childData!['rollno'] ?? '';
-      _stateController.text = widget.childData!['state'] ?? '';
+      // _stateController.text = widget.childData!['state'] ?? '';
       _ageController.text = widget.childData!['age']?.toString() ?? '';
       gender = widget.childData!['gender'];
     }
@@ -56,7 +60,13 @@ class _AddChildScreenState extends State<AddChildScreen> {
     _classNameController.dispose();
     _rollNoController.dispose();
     _ageController.dispose();
-    _stateController.dispose();
+    _nameFocus.dispose();
+    _nicknameFocus.dispose();
+    _schoolFocus.dispose();
+    _classFocus.dispose();
+    _rollNoFocus.dispose();
+    _ageFocus.dispose();
+    // _stateController.dispose();
     super.dispose();
   }
 
@@ -76,7 +86,9 @@ class _AddChildScreenState extends State<AddChildScreen> {
     final className = _classNameController.text;
     final rollNo = _rollNoController.text;
     final age = _ageController.text;
-    final state = _stateController.text;
+    //using database user table
+    final users = await db.getUsers();
+    final state = users[0]['state'];
     Logger().i(
       'name: $childname, nickname: $nickname, school: $school, class: $className, rollNo: $rollNo, age: $age, state: $state, gender: $gender',
     );
@@ -134,6 +146,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
             gender: gender ?? '',
             tagId: "",
             routeInfo: [],
+            tsp_id: [],
             status: 0,
             onboard_status: 0,
           );
@@ -156,6 +169,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
             gender: gender ?? '',
             tagId: widget.childData?['tagId'] ?? '',
             routeInfo: widget.childData?['routeInfo'] ?? [],
+            tsp_id: widget.childData?['tsp_id'] ?? '',
             status: widget.childData?['status'] ?? 0,
             onboard_status: widget.childData?['onboard_status'] ?? 0,
           );
@@ -189,87 +203,198 @@ class _AddChildScreenState extends State<AddChildScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
+      // appBar: AppBar(
+      //   title: Text(widget.isEdit ? 'Edit Child' : 'Add Child'),
+      //   backgroundColor: colorScheme.primary,
+      //   foregroundColor: colorScheme.onPrimary,
+      // ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
+              Text(
+                widget.isEdit
+                    ? 'Edit '
+                    : 'Add '
+                          'Child Information',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
               Card(
                 elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      // Text(
-                      //   'Child Information',
-                      //   style: TextStyle(
-                      //     fontSize: 20,
-                      //     fontWeight: FontWeight.bold,
-                      //     color: Theme.of(context).primaryColor,
-                      //   ),
-                      // ),
-                      // SizedBox(height: 16),
                       TextFormField(
                         controller: _nameController,
+                        focusNode: _nameFocus,
+                        textCapitalization: TextCapitalization.sentences,
                         keyboardType: TextInputType.name,
                         decoration: InputDecoration(
                           labelText: 'Full Name',
-                          prefixIcon: Icon(Icons.person),
-                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(
+                            Icons.person,
+                            color: colorScheme.primary,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
+                        onFieldSubmitted: (value) =>
+                            FocusScope.of(context).requestFocus(_nicknameFocus),
                         validator: (value) => value == null || value.isEmpty
                             ? 'Enter name'
                             : null,
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _nicknameController,
+                        focusNode: _nicknameFocus,
+                        textCapitalization: TextCapitalization.sentences,
                         keyboardType: TextInputType.name,
                         decoration: InputDecoration(
                           labelText: 'Nickname',
-                          prefixIcon: Icon(Icons.person_outline),
-                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(
+                            Icons.person_outline,
+                            color: colorScheme.primary,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
+                        onFieldSubmitted: (value) =>
+                            FocusScope.of(context).requestFocus(_schoolFocus),
                         validator: (value) => value == null || value.isEmpty
                             ? 'Enter nickname'
                             : null,
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _schoolController,
+                        focusNode: _schoolFocus,
+                        textCapitalization: TextCapitalization.sentences,
                         keyboardType: TextInputType.name,
                         decoration: InputDecoration(
                           labelText: 'School Name',
-                          prefixIcon: Icon(Icons.school),
-                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(
+                            Icons.school,
+                            color: colorScheme.primary,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
+                        onFieldSubmitted: (value) =>
+                            FocusScope.of(context).requestFocus(_classFocus),
                         validator: (value) => value == null || value.isEmpty
                             ? 'Enter school'
                             : null,
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _classNameController,
+                        focusNode: _classFocus,
+                        textCapitalization: TextCapitalization.sentences,
                         keyboardType: TextInputType.text,
                         decoration: InputDecoration(
                           labelText: 'Class',
-                          prefixIcon: Icon(Icons.class_),
-                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(
+                            Icons.class_,
+                            color: colorScheme.primary,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
+                        onFieldSubmitted: (value) =>
+                            FocusScope.of(context).requestFocus(_rollNoFocus),
                         validator: (value) => value == null || value.isEmpty
                             ? 'Enter class'
                             : null,
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _rollNoController,
+                        focusNode: _rollNoFocus,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           labelText: 'Roll No',
-                          prefixIcon: Icon(Icons.numbers),
-                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(
+                            Icons.numbers,
+                            color: colorScheme.primary,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -281,58 +406,113 @@ class _AddChildScreenState extends State<AddChildScreen> {
                           return null;
                         },
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         decoration: InputDecoration(
                           labelText: 'Gender',
-                          prefixIcon: Icon(Icons.wc),
-                          border: OutlineInputBorder(),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                         ),
                         value: gender,
                         items: ['Male', 'Female', 'Other']
                             .map(
-                              (g) => DropdownMenuItem(value: g, child: Text(g)),
+                              (g) => DropdownMenuItem(
+                                value: g,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      g == 'Male'
+                                          ? Icons.male
+                                          : g == 'Female'
+                                          ? Icons.female
+                                          : Icons.person,
+                                      color: colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(g),
+                                  ],
+                                ),
+                              ),
                             )
                             .toList(),
                         onChanged: (value) => setState(() => gender = value),
                         validator: (value) =>
                             value == null ? 'Select gender' : null,
+                        dropdownColor: colorScheme.surface,
+                        style: TextStyle(color: colorScheme.onSurface),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _ageController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           labelText: 'Age',
-                          prefixIcon: Icon(Icons.calendar_month),
-                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(
+                            Icons.calendar_month,
+                            color: colorScheme.primary,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: colorScheme.primary,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: colorScheme.outline),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         validator: (value) =>
                             value == null || value.isEmpty ? 'Enter age' : null,
                       ),
-                      SizedBox(height: 16),
-                      TextFormField(
-                        controller: _stateController,
-                        keyboardType: TextInputType.streetAddress,
-                        decoration: InputDecoration(
-                          labelText: 'State',
-                          prefixIcon: Icon(Icons.location_on),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Enter state'
-                            : null,
-                      ),
+                      // SizedBox(height: 16),
+                      // TextFormField(
+                      //   controller: _stateController,
+                      //   keyboardType: TextInputType.streetAddress,
+                      //   decoration: InputDecoration(
+                      //     labelText: 'State',
+                      //     prefixIcon: Icon(Icons.location_on),
+                      //     border: OutlineInputBorder(),
+                      //   ),
+                      //   validator: (value) => value == null || value.isEmpty
+                      //       ? 'Enter state'
+                      //       : null,
+                      // ),
                     ],
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _validateAndSubmit,
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  textStyle: TextStyle(fontSize: 18),
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  textStyle: const TextStyle(fontSize: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 child: Text(widget.isEdit ? 'Update Child' : 'Add Child'),
               ),
@@ -350,7 +530,7 @@ class _AddChildScreenState extends State<AddChildScreen> {
     _classNameController.clear();
     _rollNoController.clear();
     _ageController.clear();
-    _stateController.clear();
+    // _stateController.clear();
     gender = null;
   }
 }

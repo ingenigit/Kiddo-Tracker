@@ -112,6 +112,7 @@ class ChildrenService {
             gender: student['gender'],
             tagId: student['tag_id'],
             routeInfo: parsedRouteInfo,
+            tsp_id: (student['tsp_id'] != null && student['tsp_id'].isNotEmpty) ? List<String>.from(jsonDecode(student['tsp_id'])) : [],
             status: student['status'],
             onboard_status: student['onboard_status'],
           );
@@ -223,10 +224,12 @@ class ChildrenService {
         child.routeInfo.map((route) => '${route.routeId}/${route.oprId}'),
       );
     }
-
-    // Determine topics to add and topics to remove
-    final topicsToAdd = newTopics.where((topic) => !currentTopics.contains(topic)).toList();
-    final topicsToRemove = currentTopics.where((topic) => !newTopics.contains(topic)).toList();
+    final topicsToAdd = newTopics
+        .where((topic) => !currentTopics.contains(topic))
+        .toList();
+    final topicsToRemove = currentTopics
+        .where((topic) => !newTopics.contains(topic))
+        .toList();
 
     // Unsubscribe from removed topics
     if (topicsToRemove.isNotEmpty) {
