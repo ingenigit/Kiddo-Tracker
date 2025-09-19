@@ -121,6 +121,10 @@ class _HomeScreenState extends State<HomeScreen>
                           if (!_mqttCompleter.isCompleted) {
                             _mqttCompleter.complete(mqttService);
                           }
+                          Provider.of<ChildrenProvider>(
+                            context,
+                            listen: false,
+                          ).setMqttService(mqttService);
                         },
                       ),
                       Expanded(
@@ -504,6 +508,10 @@ class _HomeScreenState extends State<HomeScreen>
               context,
               listen: false,
             ).updateChildren();
+            await Provider.of<ChildrenProvider>(
+              context,
+              listen: false,
+            ).removeChildOrRouteOprid("route", studentId);
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Delete tapped for route $routeId')),

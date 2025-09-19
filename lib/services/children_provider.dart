@@ -10,11 +10,17 @@ class ChildrenProvider with ChangeNotifier {
   Map<String, SubscriptionPlan> _studentSubscriptions = {};
   List<Map<String, dynamic>> activities = [];
   final SqfliteHelper _sqfliteHelper = SqfliteHelper();
+  MQTTService? _mqttService;
 
   List<Child> get children => _children;
   Map<String, SubscriptionPlan> get studentSubscriptions =>
       _studentSubscriptions;
   List<Map<String, dynamic>> get activitiesList => activities;
+  MQTTService? get mqttService => _mqttService;
+
+  void setMqttService(MQTTService service) {
+    _mqttService = service;
+  }
 
   Future<void> updateChildren() async {
     try {
@@ -57,19 +63,65 @@ class ChildrenProvider with ChangeNotifier {
     }
   }
 
-  Future<void> subscribeToTopics({required MQTTService mqttService}) async {
-    if (mqttService.subscribedTopics.isNotEmpty) {
-      mqttService.unsubscribeFromAllTopics();
+  Future<void> subscribeToTopics({MQTTService? mqttService}) async {
+    final service = mqttService ?? _mqttService;
+    if (service == null) return;
+
+    if (service.subscribedTopics.isNotEmpty) {
+      service.unsubscribeFromAllTopics();
     }
 
-    List<String> topics = _children.map((child) => child.studentId).toList();
+    Set<String> topicSet = {};
+    topicSet.addAll(_children.map((child) => child.studentId));
     for (var child in _children) {
-      topics.addAll(
+      topicSet.addAll(
         child.routeInfo.map((route) => '${route.routeId}/${route.oprId}'),
       );
     }
 
-    mqttService.subscribeToTopics(topics);
+    List<String> topics = topicSet.toList();
+    service.subscribeToTopics(topics);
+  }
+
+  Future<void> removeChildOrRouteOprid(
+    String type,
+    String studentId, {
+    MQTTService? mqttService,
+  }) async {
+    final service = mqttService ?? _mqttService;
+    if (service == null) return;
+
+    // Find the child to remove
+    final childIndex = _children.indexWhere(
+      (child) => child.studentId == studentId,
+    );
+    if (childIndex == -1) return;
+
+    final childToRemove = _children[childIndex];
+    Set<String> topicsToUnsubscribe = {};
+    // Calculate topics to unsubscribe
+    if (type == 'child') {
+      topicsToUnsubscribe = {childToRemove.studentId};
+    } else {
+      topicsToUnsubscribe.addAll(
+        childToRemove.routeInfo.map(
+          (route) => '${route.routeId}/${route.oprId}',
+        ),
+      );
+    }
+    // Remove child from list
+    // _children.removeAt(childIndex);
+
+    // Unsubscribe from removed topics
+    service.unsubscribeFromTopics(topicsToUnsubscribe.toList());
+
+    // Re-subscribe to remaining topics
+    await subscribeToTopics(mqttService: service);
+
+    // Update database if needed (assuming SqfliteHelper has a delete method)
+    // await _sqfliteHelper.deleteChild(studentId);
+
+    notifyListeners();
   }
 
   Future<void> updateActivity() async {

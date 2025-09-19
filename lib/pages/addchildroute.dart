@@ -112,10 +112,9 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
                       widget.stdId!,
                       newRoute,
                     );
-                    Provider.of<ChildrenProvider>(
-                      context,
-                      listen: false,
-                    ).updateChildren();
+                    final provider = Provider.of<ChildrenProvider>(context, listen: false);
+                    await provider.updateChildren();
+                    await provider.subscribeToTopics();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("New Route Added Successfully.")),
                     );

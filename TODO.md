@@ -1,2 +1,2 @@
-- [ ] Add confirmation dialog to _onDeleteTap method in lib/pages/homescreen.dart
-- [ ] Test the confirmation dialog functionality
+- [ ] On new child add, add the student_id to MQTT subscribe topic (implement in addchildscreen.dart and MQTTService)
+- [ ] If new route or new oprid is set, check if it exists or not. If not, add it to the MQTT subscribe topic (implement in route management screens)

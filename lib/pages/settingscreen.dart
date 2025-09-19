@@ -113,14 +113,10 @@ class _SettingScreenState extends State<SettingScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity( 0.2),
+                    color: Theme.of(context).primaryColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.phone,
-                    size: 30,
-                    color: Colors.white,
-                  ),
+                  child: const Icon(Icons.phone, size: 30, color: Colors.white),
                 ),
                 title: Text('Mobile'),
                 subtitle: Text(mobileNumber),
@@ -133,10 +129,10 @@ class _SettingScreenState extends State<SettingScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: ListTile(
-                leading:Container(
+                leading: Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity( 0.2),
+                    color: Theme.of(context).primaryColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -322,7 +318,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
   void deleteChild(int idx) async {
     final studentId = children[idx]['student_id'];
-
+    final provider = Provider.of<ChildrenProvider>(context, listen: false);
     final oprIdList = await sqfliteHelper.getAllRoutesByStudentId(studentId);
     final logOprIdList = oprIdList.isNotEmpty
         ? oprIdList.map((e) => '"$e"').toList().toString()
@@ -347,10 +343,7 @@ class _SettingScreenState extends State<SettingScreen> {
           setState(() {
             children.removeAt(idx);
           });
-          Provider.of<ChildrenProvider>(
-            context,
-            listen: false,
-          ).updateChildren();
+          provider.updateChildren();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -359,6 +352,7 @@ class _SettingScreenState extends State<SettingScreen> {
               ),
             ),
           );
+          provider.removeChildOrRouteOprid('child', studentId);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
