@@ -15,7 +15,7 @@ import 'package:kiddo_tracker/services/permission_service.dart';
 import 'package:kiddo_tracker/widget/child_card_widget.dart';
 import 'package:kiddo_tracker/widget/location_and_route_dialog.dart';
 import 'package:kiddo_tracker/widget/mqtt_widget.dart';
-
+import 'package:kiddo_tracker/widget/stop_locations_dialog.dart';
 import 'package:kiddo_tracker/widget/shareperference.dart';
 import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 import 'package:kiddo_tracker/utils/location_utils.dart';
@@ -77,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen>
     await _fetchChildrenFromDb();
     await _mqttCompleter.future;
     await _subscribeToTopics();
-    //await _fetchRouteStoapge();
+    // await _fetchRouteStoapge();
   }
 
   Future<void> _subscribeToTopics() async {
@@ -427,6 +427,8 @@ class _HomeScreenState extends State<HomeScreen>
     );
 
     try {
+      // Fetch location and route details
+
       final responseRouteDetail = await ApiService.fetchVehicleInfo(
         userId!,
         sessionId!,
@@ -446,15 +448,55 @@ class _HomeScreenState extends State<HomeScreen>
         oprId,
         routeId,
       );
-      Logger().i('stopList: $stopList');
+      Logger().i('oprId: $oprId, routeId: $routeId, stopList: $stopList');
+      //data of stop_list
+      //use stopList and show the stop_name and location in a list
+      final stopListMap = stopList.toList();
+      Logger().i('stopListMap: $stopListMap');
 
-      final map = extractLocationAndRouteData(
-        responseLocation,
-        responseRouteDetail,
-      );
-      Logger().i(map);
+      //open a  dialog and show the listed location in google map.
+      // Parse stop_list data and show in dialog
+      if (stopListMap.isNotEmpty && stopListMap[0]['stop_list'] != null) {
+        final stopListJson = stopListMap[0]['stop_list'];
+        if (stopListJson is String && stopListJson.isNotEmpty) {
+          try {
+            final List<dynamic> stopsData = jsonDecode(stopListJson);
+            final List<StopLocation> stopLocations = stopsData.map((stopData) {
+              return StopLocation.fromJson(stopData as Map<String, dynamic>);
+            }).toList();
+
+            final routeName = routes.first.routeName ?? 'Route $routeId';
+
+            // Show the stop locations dialog
+            showDialog(
+              context: context,
+              builder: (context) => StopLocationsDialog(
+                stopLocations: stopLocations,
+                routeName: routeName,
+              ),
+            );
+          } catch (e) {
+            Logger().e('Error parsing stop_list JSON: $e');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Error loading stop locations')),
+            );
+          }
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No stop locations available for this route'),
+          ),
+        );
+      }
+
+      // final map = extractLocationAndRouteData(
+      //   responseLocation,
+      //   responseRouteDetail,
+      // );
+      // Logger().i(map);
       //now open a custom dialog to show location and route details
-      _showLocationAndRouteDialog(map);
+      // _showLocationAndRouteDialog(map);
     } catch (e) {
       Logger().e('Error fetching location and route details: $e');
     }
@@ -508,10 +550,8 @@ class _HomeScreenState extends State<HomeScreen>
               context,
               listen: false,
             ).updateChildren();
-            await Provider.of<ChildrenProvider>(
-              context,
-              listen: false,
-            ).removeChildOrRouteOprid("route", studentId);
+            await Provider.of<ChildrenProvider>(context, listen: false);
+            // .removeChildOrRouteOprid("route", studentId);
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Delete tapped for route $routeId')),
@@ -541,7 +581,7 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _fetchRouteStoapge() async {
     final userId = await SharedPreferenceHelper.getUserNumber();
     final sessionId = await SharedPreferenceHelper.getUserSessionId();
-
+    //get tsp id from database
     final kkmklk = await _sqfliteHelper.getChildTspId();
     Logger().i('kkmklk: $kkmklk');
     List<String> kkmklk2 = [];
@@ -564,41 +604,20 @@ class _HomeScreenState extends State<HomeScreen>
             data: {'userid': userId, 'sessionid': sessionId, 'tsp_id': tspId},
           )
           .then((response) {
-            if (response.statusCode == 200) {
-              Logger().i(response.data);
-              if (response.data[0]['result'] == 'ok') {
-                if (response.data[2]['studentdata'] != null) {
-                  /*
-                  [
-                  {"result":"ok"},
-                  {"data":[
-                    {"oprid":44,"route_id":"OR76295500004","timing":"10:00:00","vehicle_id":"OD33AK9302","stop_details":[
-                      {"1":["Khandagiri","10:00","10:05","20.2568819,85.7791854"]},
-                      {"2":["Baramunda","10:10","10:11","20.2788292,85.7947875"]},
-                      {"3":["Fire Station Chowk","10:20","10:21","20.2797837,85.799151"]},
-                      {"4":["CRPF Square","10:28","10:30","20.2849144,85.80781859999999"]}
-                      ],
-                    "route_name":"Route 20","type":1, "stop_list":[
-                      {"stop_id":"1","stop_name":"Khandagiri","location":"20.2568819,85.7791854","stop_type":1},
-                      {"stop_id":"2","stop_name":"Baramunda","location":"20.2788292,85.7947875","stop_type":2},
-                      {"stop_id":"3","stop_name":"Fire Station Chowk","location":"20.2797837,85.799151","stop_type":2},
-                      {"stop_id":"4","stop_name":"CRPF Square","location":"20.2849144,85.80781859999999","stop_type":3}
-                    ]
-                  }
-                  ]
-                    */
-                  for (var item in response.data[2]['studentdata']) {
-                    //save in database
-                    _sqfliteHelper.insertRoute(
-                      item['oprid'],
-                      item['route_id'],
-                      item['timing'],
-                      item['vehicle_id'],
-                      item['route_name'],
-                      item['type'],
-                      item['stop_list'],
-                    );
-                  }
+            Logger().i(response.data);
+            if (response.data[0]['result'] == 'ok') {
+              if (response.data[1]['data'] != null) {
+                //save to database insertRoute
+                for (var route in response.data[1]['data']) {
+                  _sqfliteHelper.insertRoute(
+                    route['oprid'],
+                    route['route_id'],
+                    route['timing'],
+                    route['vehicle_id'],
+                    route['route_name'],
+                    route['type'],
+                    route['stop_list'],
+                  );
                 }
               }
             }

@@ -95,12 +95,22 @@ class _SettingScreenState extends State<SettingScreen> {
                 ),
                 SizedBox(width: 10),
                 Text(
-                  userName.isNotEmpty ? 'Suman Bahadur Shrestha' : 'Loading...',
+                  userName.isNotEmpty ? userName : 'Loading...',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 25,
                     color: Theme.of(context).primaryColor,
                   ),
+                ),
+                // data sync icon
+                Spacer(),
+                IconButton(
+                  icon: Icon(
+                    Icons.sync,
+                    color: Theme.of(context).primaryColor,
+                    size: 35,
+                  ),
+                  onPressed: () => dataSync(),
                 ),
               ],
             ),
@@ -352,7 +362,7 @@ class _SettingScreenState extends State<SettingScreen> {
               ),
             ),
           );
-          provider.removeChildOrRouteOprid('child', studentId);
+          // provider.removeChildOrRouteOprid('child', studentId);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -384,5 +394,10 @@ class _SettingScreenState extends State<SettingScreen> {
         ),
       );
     }
+  }
+  
+  void dataSync() {
+    //run all the api and update the database.
+    
   }
 }

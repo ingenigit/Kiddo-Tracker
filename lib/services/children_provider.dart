@@ -116,7 +116,6 @@ class ChildrenProvider with ChangeNotifier {
     service.unsubscribeFromTopics(topicsToUnsubscribe.toList());
 
     // Re-subscribe to remaining topics
-    await subscribeToTopics(mqttService: service);
 
     // Update database if needed (assuming SqfliteHelper has a delete method)
     // await _sqfliteHelper.deleteChild(studentId);

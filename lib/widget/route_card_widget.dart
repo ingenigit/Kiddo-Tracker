@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:kiddo_tracker/model/route.dart';
+import 'package:kiddo_tracker/utils/in_range.dart';
 import 'package:kiddo_tracker/widget/sqflitehelper.dart';
 
 class RouteCardWidget extends StatefulWidget {
@@ -36,6 +37,8 @@ class RouteCardWidget extends StatefulWidget {
 class _RouteCardWidgetState extends State<RouteCardWidget> {
   String onboardTime = '_';
   String offboardTime = '_';
+  String onlocation = '_';
+  String offlocation = '_';
   final SqfliteHelper _sqfliteHelper = SqfliteHelper();
 
   @override
@@ -65,7 +68,8 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
       setState(() {
         onboardTime = times['onboardTime'] ?? '_';
         offboardTime = times['offboardTime'] ?? '_';
-        final location = times['location'] ?? '_';
+        onlocation = times['onLocation'] ?? '_';
+        offlocation = times['offLocation'] ?? '_';
       });
     }
   }
@@ -278,14 +282,37 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: Text(
-                          '${widget.routes.first.routeName} starts at $startTime',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                      Flexible(
+                        fit: FlexFit.loose,
+                        child: Column(
+                          children: [
+                            Text(
+                              '${widget.routes.first.routeName} starts at $startTime',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              'Home: ${widget.routes.first.stopLocation}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            if (widget.routes.first.schoolLocation != null &&
+                                widget.routes.first.schoolLocation.isNotEmpty)
+                              Text(
+                                'School: ${widget.routes.first.schoolLocation}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],
@@ -304,17 +331,59 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                         vertical: 4,
                         horizontal: 8,
                       ),
-                      child: Row(
+                      child: Column(
                         children: [
-                          const Icon(Icons.login, size: 18, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Onboard at $onboardTime',
-                            style: const TextStyle(
-                              color: Colors.blue,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.login,
+                                size: 18,
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '($onlocation)',
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          FutureBuilder<bool>(
+                            future: isWithinRange(
+                              widget.routes.first.stopLocation,
+                              onlocation,
+                              50,
                             ),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const CircularProgressIndicator(); // Loading indicator while waiting for the result
+                              } else if (snapshot.hasError) {
+                                return Text('Error: ${snapshot.error}');
+                              } else if (snapshot.hasData &&
+                                  snapshot.data == true) {
+                                return Text(
+                                  'Onboard at $onboardTime',
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                );
+                              } else {
+                                return Text(
+                                  'Onboard',
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                );
+                              }
+                            },
                           ),
                         ],
                       ),
@@ -343,7 +412,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Offboard at $offboardTime',
+                            '($offlocation)',
                             style: const TextStyle(
                               color: Colors.blue,
                               fontSize: 14,
@@ -357,7 +426,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                 ],
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 5),
             Column(
               children: [
                 InkWell(
@@ -374,7 +443,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                     ),
                     child: Icon(
                       Icons.share_location_outlined,
-                      size: 30,
+                      size: 15,
                       color: Colors.blueAccent,
                     ),
                   ),
@@ -393,7 +462,7 @@ class _RouteCardWidgetState extends State<RouteCardWidget> {
                     ),
                     child: const Icon(
                       Icons.delete,
-                      size: 30,
+                      size: 15,
                       color: Color.fromARGB(255, 255, 136, 127),
                     ),
                   ),

@@ -153,14 +153,20 @@ class SqfliteHelper {
     List<Map<String, dynamic>> sortedResults = List.from(results);
     sortedResults.sort((a, b) => b['created_at'].compareTo(a['created_at']));
 
-    for (var row in sortedResults) {
-      //load if onboarded == '_' or override if not '_'
-      if (row['status'] == 'onboarded') {
-        onboardTime = row['created_at'].toString();
-        onLocation = row['on_location'];
-      } else if (row['status'] == 'offboarded') {
-        offboardTime = row['created_at'].toString();
-        offLocation = row['off_location'];
+    Map<String, dynamic>? latest = sortedResults.isNotEmpty
+        ? sortedResults.first
+        : null;
+
+    if (latest != null) {
+      // Check if the latest entry's status is 'onboarded'
+      if (latest['status'] == 'onboarded') {
+        onboardTime = latest['created_at'].toString();
+        onLocation = latest['on_location'];
+      }
+      // Check if the latest entry's status is 'offboarded'
+      else if (latest['status'] == 'offboarded') {
+        offboardTime = latest['created_at'].toString();
+        offLocation = latest['off_location'];
       }
     }
 
@@ -216,11 +222,17 @@ class SqfliteHelper {
   }
 
   //get child tsp_id in list
-  //also handle ["OD115856"] formate also the duplicate data too
   Future<List<String>> getChildTspId() async {
     final dbClient = await db;
-    final results = await dbClient.query('child', columns: ['tsp_id'], distinct: true);
-    return results.map((e) => e['tsp_id'] as String).where((element) => element.isNotEmpty).toList();
+    final results = await dbClient.query(
+      'child',
+      columns: ['tsp_id'],
+      distinct: true,
+    );
+    return results
+        .map((e) => e['tsp_id'] as String)
+        .where((element) => element.isNotEmpty)
+        .toList();
   }
 
   //get route_info by student_id
@@ -390,7 +402,13 @@ class SqfliteHelper {
     });
   }
 
-  //get stop_list from route base on oprid and route_id
+  //get all data from routes table
+  // Future<List<Map<String, dynamic>>> getAllRoutes() async {
+  //   final dbClient = await db;
+  //   return await dbClient.query('routes');
+  // }
+
+  //get only stop_list from route base on oprid and route_id
   Future<List<Map<String, dynamic>>> getStopListByOprIdAndRouteId(
     String oprId,
     String routeId,
@@ -398,6 +416,7 @@ class SqfliteHelper {
     final dbClient = await db;
     return await dbClient.query(
       'routes',
+      columns: ['stop_list'],
       where: 'oprid = ? AND route_id = ?',
       whereArgs: [oprId, routeId],
     );

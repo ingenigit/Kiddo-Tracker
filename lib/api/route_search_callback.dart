@@ -1,10 +1,12 @@
 import 'package:kiddo_tracker/model/routelist.dart';
+import 'package:logger/logger.dart';
 
 class RouteSearchCallback {
   List<RouteList> routeList;
   Set<String> uniqueRouteIds;
   Map<String, List<String>> routeTimingsMap;
   int reqStatus;
+  List<Map<String, String?>> stops = [];
 
   RouteSearchCallback()
     : routeList = [],
@@ -59,14 +61,15 @@ class RouteSearchCallback {
   // Return a list of route names
   List<String> getRouteNames() {
     List<String> routeNames = [];
-    for (String routeId in uniqueRouteIds) {
-      for (RouteList route in routeList) {
-        if (route.routeId == routeId) {
-          String type = route.type == 1 ? "OnWard" : "Return";
-          routeNames.add("${route.routeName ?? route.routeId} $type");
-          break;
-        }
+    for (RouteList route in routeList) {
+      //check the exits routeName and type in routeNames list
+      if (routeNames.contains(
+        "${route.routeName ?? route.routeId} ${route.type == 1 ? "OnWard" : "Return"}",
+      )) {
+        continue;
       }
+      String type = route.type == 1 ? "OnWard" : "Return";
+      routeNames.add("${route.routeName ?? route.routeId} $type");
     }
     return routeNames;
   }
@@ -91,20 +94,22 @@ class RouteSearchCallback {
   }
 
   //Return a list of stop_details for a given route
-  List<String> getStopDetails(String routeId) {
-    List<String> stopDetails = [];
-    for (RouteList route in routeList) {
-      if (route.routeId == routeId && route.stopDetails != null) {
-        for (var stopDetail in route.stopDetails!) {
-          stopDetails.add(
-            '${stopDetail.stopName}\nArrival: ${stopDetail.arrival}\nDeparture: ${stopDetail.departure}\nLocation: ${stopDetail.location ?? ''}\n',
-          );
-        }
-      }
-    }
-    return stopDetails;
-  }
+  // List<Map<String, String?>> getStopList(List<StopListItem>? stopList) {
+  //   List<Map<String, String?>> stops = [];
+  //   if (stopList != null) {
+  //     for (var stop in stopList) {
+  //       stops.add({
+  //         'key': stop.stopId,
+  //         'value': stop.stopName,
+  //         'location': stop.location,
+  //       });
 
+  //     }
+  //   }
+  //   return stops;
+  // }
+
+  // Return the vehicleId for a given timing and routeId
   getVehicleIdbyTiming(String timing, String routeId) {
     for (RouteList route in routeList) {
       if (route.timing == timing && route.routeId == routeId) {
@@ -112,5 +117,43 @@ class RouteSearchCallback {
       }
     }
     return 0;
+  }
+
+  List<Map<String, String?>> getStopList(String s) {
+    stops = [];
+    for (RouteList route in routeList) {
+      if (route.routeId == s) {
+        for (var stop in route.stopList ?? []) {
+          stops.add({
+            'key': stop.stopId,
+            'value': stop.stopName,
+            'location': stop.location,
+          });
+        }
+        break;
+      }
+    }
+    return stops;
+  }
+
+  // get time base on timing or oprid and add time to matched routeid in stops
+  List<String> getTimesbyStopId(String stopId, String routeId) {
+    //get stop arrival time and departure time if available by matching stop name
+    Logger().d("Stop details: $stops");
+    for (RouteList route in routeList) {
+      for (var stopDetail in route.stopDetails ?? []) {
+        if (stopDetail.stopName == stops[0]['value']) {
+          //check if stopDetails contains arrival and departure
+          if (stopDetail.arrival != null && stopDetail.departure != null) {
+            //then check the null values
+            if (stopDetail.arrival != null && stopDetail.departure != null) {
+              stops.last['time'] =
+                  '(${stopDetail.arrival} - ${stopDetail.departure})';
+            }
+          }
+        }
+      }
+    }
+    return stops.map((e) => e['time'] ?? '').toList();
   }
 }

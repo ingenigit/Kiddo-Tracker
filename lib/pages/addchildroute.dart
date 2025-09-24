@@ -30,15 +30,18 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
 
   final List<RouteList> _routes = [];
   List<String> _times = [];
-  List<Map<String, String>> _stopages = [];
+  List<Map<String, String?>> _stopages = [];
 
   String? _selectedRoute;
   String? _selectedRouteName;
+  int? _selectedRouteType;
   String? _selectedRouteId;
   String? _selectedTime;
   String? _selectedorpId;
   String? _selectedStopage;
   String? _selectedStopageName;
+  String? _selectedHomeGeo;
+  String? _schoolStopGeo;
   String? _stopageId;
   String? _vehicleId;
   //callback
@@ -56,7 +59,7 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
       Logger().i(
         'userid: $_userId, sessionid: $_sessionId, student_id: ${widget.stdId}, tsp_id: $_selectedInstitute, Route_id: $_selectedRouteId, route_name: $_selectedRouteName, stop_arrival_time: $_selectedTime, stop_name: $_selectedStopageName, oprid: $_selectedorpId, vehicle_id: $_vehicleId, stop_id: $_stopageId',
       );
-      // Add backend logic here
+      // call api to save the route
       ApiManager()
           .post(
             'ktuassignstdtoroute',
@@ -69,6 +72,7 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
               'oprid': _selectedorpId,
               'vehicle_id': _vehicleId,
               'stop_id': _stopageId,
+              'location': _selectedHomeGeo,
               'stop_name': _selectedStopageName,
               'stop_arrival_time': _selectedTime,
               'tsp_id': _selectedInstitute,
@@ -82,37 +86,57 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
                   if (widget.stdId != null) {
                     final sqfliteHelper = SqfliteHelper();
                     // Get existing routes
-                    final existingRouteStr = await sqfliteHelper.getRouteInfoByStudentId(widget.stdId!);
+                    final existingRouteStr = await sqfliteHelper
+                        .getRouteInfoByStudentId(widget.stdId!);
                     List<RouteInfo> routeList = [];
-                    if (existingRouteStr != null && existingRouteStr.isNotEmpty) {
+                    if (existingRouteStr != null &&
+                        existingRouteStr.isNotEmpty) {
                       try {
                         final decoded = jsonDecode(existingRouteStr);
                         if (decoded is List) {
-                          routeList = decoded.map<RouteInfo>((e) => RouteInfo.fromJson(e is String ? jsonDecode(e) : e as Map<String, dynamic>)).toList();
+                          routeList = decoded
+                              .map<RouteInfo>(
+                                (e) => RouteInfo.fromJson(
+                                  e is String
+                                      ? jsonDecode(e)
+                                      : e as Map<String, dynamic>,
+                                ),
+                              )
+                              .toList();
                         }
                       } catch (e) {
                         Logger().e('Error decoding existing routes: $e');
                       }
                     }
-                    // Add new route
-                    routeList.add(RouteInfo(
-                      routeId: _selectedRouteId ?? '',
-                      routeName: _selectedRouteName ?? '',
-                      stopArrivalTime: _selectedTime ?? '',
-                      stopName: _selectedStopageName ?? '',
-                      oprId: _selectedorpId ?? '',
-                      vehicleId: _vehicleId ?? '',
-                      stopId: _stopageId ?? '',
-                    ));
+                    // Add new route to db
+                    routeList.add(
+                      RouteInfo(
+                        routeId: _selectedRouteId ?? '',
+                        routeType: _selectedRouteType ?? 0,
+                        routeName: _selectedRouteName ?? '',
+                        stopArrivalTime: _selectedTime ?? '',
+                        stopName: _selectedStopageName ?? '',
+                        stopLocation: _selectedHomeGeo ?? '',
+                        schoolLocation: _schoolStopGeo ?? '',
+                        oprId: _selectedorpId ?? '',
+                        vehicleId: _vehicleId ?? '',
+                        stopId: _stopageId ?? '',
+                      ),
+                    );
                     // make the routeList inside String
                     Logger().i(routeList.map((e) => e.toJson()).toList());
-                    final newRoute = jsonEncode(routeList.map((e) => e.toJson()).toList());
+                    final newRoute = jsonEncode(
+                      routeList.map((e) => e.toJson()).toList(),
+                    );
                     Logger().i(newRoute);
                     await sqfliteHelper.updateRouteInfoByStudentId(
                       widget.stdId!,
                       newRoute,
                     );
-                    final provider = Provider.of<ChildrenProvider>(context, listen: false);
+                    final provider = Provider.of<ChildrenProvider>(
+                      context,
+                      listen: false,
+                    );
                     await provider.updateChildren();
                     await provider.subscribeToTopics();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -151,10 +175,7 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
       controller: _instituteController,
       decoration: InputDecoration(
         labelText: 'Institute',
-        prefixIcon: Icon(
-          Icons.school,
-          color: colorScheme.primary,
-        ),
+        prefixIcon: Icon(Icons.school, color: colorScheme.primary),
         suffixIcon: IconButton(
           //check icon is search or clear
           icon: Icon(_searchIcon),
@@ -171,14 +192,9 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
             }
           },
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(
-            color: colorScheme.primary,
-            width: 2,
-          ),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
           borderRadius: BorderRadius.circular(8),
         ),
         enabledBorder: OutlineInputBorder(
@@ -195,18 +211,10 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
         labelText: 'Route No',
-        prefixIcon: Icon(
-          Icons.route,
-          color: colorScheme.primary,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        prefixIcon: Icon(Icons.route, color: colorScheme.primary),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(
-            color: colorScheme.primary,
-            width: 2,
-          ),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
           borderRadius: BorderRadius.circular(8),
         ),
         enabledBorder: OutlineInputBorder(
@@ -239,26 +247,26 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
               _selectedRouteName = selectedRoute.routeName;
               Logger().i(selectedRoute.toJson());
               _selectedRouteId = selectedRoute.routeId;
+              _selectedRouteType = selectedRoute.type;
               _times = callback.getRouteTimings(_selectedRouteId!);
-              _stopages = (selectedRoute.stopDetails ?? []).map((stop) {
-                return {
-                  'key': stop.id,
-                  'value': stop.stopName,
-                  'time': '(${stop.arrival} - ${stop.departure})',
-                };
-              }).toList();
+              //use getStopList from callback to get stopages
+              _stopages = callback.getStopList(_selectedRouteId!);
             } catch (e) {
               _selectedRouteId = null;
+              _selectedRouteType = null;
               _times = [];
               _stopages = [];
             }
           } else {
             _selectedRouteId = null;
+            _selectedRouteType = null;
             _times = [];
             _stopages = [];
           }
           _selectedTime = null;
           _selectedStopage = null;
+          _selectedHomeGeo = null;
+          _schoolStopGeo = null;
           _selectedStopageName = null;
         });
       },
@@ -272,18 +280,10 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
         labelText: 'Time',
-        prefixIcon: Icon(
-          Icons.access_time,
-          color: colorScheme.primary,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        prefixIcon: Icon(Icons.access_time, color: colorScheme.primary),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(
-            color: colorScheme.primary,
-            width: 2,
-          ),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
           borderRadius: BorderRadius.circular(8),
         ),
         enabledBorder: OutlineInputBorder(
@@ -308,6 +308,7 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
           _vehicleId = callback
               .getVehicleIdbyTiming(value, _selectedRouteId!)
               .toString();
+          // base on time selected get update time in stopages list
         });
       },
       validator: (value) => value == null ? 'Select a time' : null,
@@ -317,6 +318,49 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
   }
 
   Widget _buildStopageSelection(ColorScheme colorScheme) {
+    // Check route type and filter stopages if route type is OnWard
+    List<Map<String, String?>> filteredStopages = _stopages;
+    bool isOnWardRoute = false;
+    //making the last item disabled if route type is OnWard
+    if (_selectedRouteId != null) {
+      try {
+        isOnWardRoute = _selectedRouteType == 1;
+      } catch (e) {
+        isOnWardRoute = false;
+      }
+    }
+    if (isOnWardRoute) {
+      // Disable the last stopage for OnWard routes
+      filteredStopages = filteredStopages.asMap().entries.map((entry) {
+        int index = entry.key;
+        var stopage = entry.value;
+        if (index == filteredStopages.length - 1) {
+          // This is the last stopage - disable it
+          setState(() {
+            _schoolStopGeo = stopage['location'];
+          });
+          return {...stopage, 'disabled': 'true'};
+        }
+        return stopage;
+      }).toList();
+    } else {
+      //reverse the stopages list
+      filteredStopages = filteredStopages.reversed.toList();
+      // Disable the first stopage for Return routes
+      filteredStopages = filteredStopages.asMap().entries.map((entry) {
+        int index = entry.key;
+        var stopage = entry.value;
+        if (index == 0) {
+          // This is the first stopage - disable it
+          setState(() {
+            _schoolStopGeo = stopage['location'];
+          });
+          return {...stopage, 'disabled': 'true'};
+        }
+        return stopage;
+      }).toList();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -327,18 +371,28 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
             color: colorScheme.primary,
           ),
         ),
-        ..._stopages.map(
+        ...filteredStopages.map(
           (stopage) => RadioListTile<String>(
-            title: Text('${stopage['value']} ${stopage['time']}'),
+            title: Text(
+              '${stopage['value']} ${stopage['time'] ?? ''}',
+              style: TextStyle(
+                color: stopage['disabled'] == 'true'
+                    ? colorScheme.onSurface.withOpacity(0.5)
+                    : colorScheme.onSurface,
+              ),
+            ),
             value: stopage['value']!,
             groupValue: _selectedStopage,
-            onChanged: (value) {
-              setState(() {
-                _selectedStopage = value;
-                _selectedStopageName = value;
-                _stopageId = stopage['key'];
-              });
-            },
+            onChanged: stopage['disabled'] == 'true'
+                ? null
+                : (value) {
+                    setState(() {
+                      _selectedStopage = value;
+                      _selectedStopageName = value;
+                      _selectedHomeGeo = stopage['location'];
+                      _stopageId = stopage['key'];
+                    });
+                  },
             activeColor: colorScheme.primary,
           ),
         ),
@@ -369,9 +423,7 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: Text('Add Route'),
     );
@@ -473,9 +525,7 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: SizedBox(
           width: MediaQuery.of(context).size.width * 0.8,
           height: MediaQuery.of(context).size.height * 0.6,
@@ -519,20 +569,21 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
                           ),
                           title: Text(
                             institute['schoolname'],
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.w500),
                           ),
                           subtitle: Text(
                             institute['tsp_id'],
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                           onTap: () {
                             setState(() {
                               _selectedInstitute = institute['tsp_id'];
-                              _instituteController.text = institute['schoolname'];
+                              _instituteController.text =
+                                  institute['schoolname'];
                               //after select change the search icon to clear icon
                               _searchIcon = Icons.clear;
                               _getrouteListBytsp();
@@ -584,6 +635,8 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
                   _selectedTime = null;
                   _selectedorpId = null;
                   _selectedStopage = null;
+                  _selectedHomeGeo = null;
+                  _schoolStopGeo = null;
                   _stopageId = null;
                   _vehicleId = null;
                 }
@@ -603,6 +656,8 @@ class _AddChildRoutePageState extends State<AddChildRoutePage> {
       _selectedTime = null;
       _selectedorpId = null;
       _selectedStopage = null;
+      _selectedHomeGeo = null;
+      _schoolStopGeo = null;
       _stopageId = null;
       _vehicleId = null;
     });

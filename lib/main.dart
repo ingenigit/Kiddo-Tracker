@@ -6,11 +6,24 @@ import 'package:kiddo_tracker/widget/shareperference.dart';
 import 'package:kiddo_tracker/pages/mainscreen.dart';
 import 'package:kiddo_tracker/pages/loginscreen.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Initialize notifications
   await NotificationService.initialize();
+
+  // Load environment variables with error handling
+  try {
+    await dotenv.load();
+    print('Environment variables loaded successfully');
+  } catch (e) {
+    print('Error loading .env file: $e');
+    print('Please ensure .env file exists in the project root with required variables');
+    // Continue with app startup even if .env loading fails
+  }
+
   runApp(
     MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => ChildrenProvider())],
