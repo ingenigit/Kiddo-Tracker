@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:logger/logger.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
@@ -20,7 +21,7 @@ class MQTTService {
 
   Future<void> connect() async {
     client = MqttServerClient.withPort(
-      '172.105.52.11',
+      '172.235.25.172',
       'flutter_client_${DateTime.now().millisecondsSinceEpoch}',
       1883,
     );
@@ -28,6 +29,7 @@ class MQTTService {
     client.logging(on: true);
     client.keepAlivePeriod = 60;
     client.autoReconnect = true;
+    client.resubscribeOnAutoReconnect = true;
     client.onAutoReconnect = onAutoReconnect;
     client.onAutoReconnected = onAutoReconnected;
     client.onConnected = onConnected;
@@ -42,14 +44,14 @@ class MQTTService {
         .withWillTopic('willtopic')
         .withWillMessage('My Will message')
         .startClean()
-        .withWillQos(MqttQos.atLeastOnce);
+        .withWillQos(MqttQos.exactlyOnce);
     client.connectionMessage = connMess;
 
     try {
-      onConnectionStatusChanged('Connecting...');
+      onConnectionStatusChanged.call('Connecting...');
       await client.connect();
     } catch (e) {
-      onConnectionStatusChanged('Connection failed: $e');
+      onConnectionStatusChanged.call('Connection failed: $e');
       client.disconnect();
       return;
     }
@@ -57,9 +59,9 @@ class MQTTService {
     // Subscribe to all topics after successful connection
     for (var topic in subscribedTopics) {
       Logger().i("/kiddotrac/$topic");
-      client.subscribe("/kiddotrac/$topic", MqttQos.atLeastOnce);
+      client.subscribe("/kiddotrac/$topic", MqttQos.exactlyOnce);
     }
-    onConnectionStatusChanged('Connected');
+    onConnectionStatusChanged.call('Connected');
 
     client.updates!.listen((List<MqttReceivedMessage<MqttMessage?>>? c) {
       final MqttPublishMessage recMessage = c![0].payload as MqttPublishMessage;
@@ -67,74 +69,112 @@ class MQTTService {
         recMessage.payload.message,
       );
 
-      onMessageReceived(payload);
-      onLogMessage('Received message: $payload from topic: ${c[0].topic}');
+      onMessageReceived.call(payload);
+      onLogMessage.call(
+        'Received message: $payload from topic: ${c[0].topic}',
+      );
     });
   }
 
   void onConnected() {
     // Subscribe to all topics on connection
     for (var topic in subscribedTopics) {
-      client.subscribe("/kiddotrac/$topic", MqttQos.atLeastOnce);
+      client.subscribe("/kiddotrac/$topic", MqttQos.exactlyOnce);
     }
-    onConnectionStatusChanged('Connected');
+    onConnectionStatusChanged.call('Connected');
   }
 
   void onDisconnected() {
-    onConnectionStatusChanged('Disconnected');
+    onConnectionStatusChanged.call('Disconnected');
   }
 
   void onAutoReconnect() {
-    onLogMessage('Client auto reconnection sequence will start');
+    onLogMessage.call('Client auto reconnection sequence will start');
   }
 
   void onAutoReconnected() {
-    onLogMessage('Client auto reconnection sequence has completed');
+    onLogMessage.call('Client auto reconnection sequence has completed');
+    onConnectionStatusChanged.call('Auto Connected');
+    _attemptReconnect();
   }
 
   void onSubscribed(String topic) {
-    onLogMessage('Subscribed topic: $topic');
+    onLogMessage.call('Subscribed topic: $topic');
   }
 
   void onSubscribeFail(String topic) {
-    onLogMessage('Failed to subscribe $topic');
+    onLogMessage.call('Failed to subscribe $topic');
   }
 
   void onUnsubscribed(String? topic) {
-    onLogMessage('Unsubscribed topic: $topic');
+    onLogMessage.call('Unsubscribed topic: $topic');
   }
 
   void pong() {
-    // onLogMessage('Ping response client callback invoked');
+    onLogMessage.call('Ping response client callback invoked');
+    //check the connection status
+    // if (client.connectionStatus?.state == MqttConnectionState.connected) {
+    //   onConnectionStatusChanged?.call('Connected');
+    // } else {
+    //   onConnectionStatusChanged?.call('Disconnected');
+    // }
   }
 
   void disconnect() {
     client.disconnect();
   }
 
+  //subscribe to multiple topics
   void subscribeToTopics(List<String> topics) {
     subscribedTopics = topics;
     if (client.connectionStatus?.state == MqttConnectionState.connected) {
       for (var topic in topics) {
-        client.subscribe("/kiddotrac/$topic", MqttQos.atLeastOnce);
-        onLogMessage('Subscribed to topic: $topic');
+        client.subscribe("/kiddotrac/$topic", MqttQos.exactlyOnce);
+        onLogMessage.call('Subscribed to topic: $topic');
       }
     }
   }
 
-  //unsubscribe to all it has
-  void unsubscribeFromAllTopics() {
-    for (var topic in subscribedTopics) {
-      client.unsubscribe("/kiddotrac/$topic");
-      onLogMessage('Unsubscribed from topic: $topic');
+  //subscribe to single topic
+  void subscribeToTopic(String topic) {
+    subscribedTopics.add(topic);
+    if (client.connectionStatus?.state == MqttConnectionState.connected) {
+      client.subscribe("/kiddotrac/$topic", MqttQos.exactlyOnce);
+      onLogMessage.call('Subscribed to topic: $topic');
     }
   }
+
+  //unsubscribe to all it has
+  // void unsubscribeFromAllTopics() {
+  //   for (var topic in subscribedTopics) {
+  //     client.unsubscribe("/kiddotrac/$topic");
+  //     onLogMessage?.call('Unsubscribed from topic: $topic');
+  //   }
+  // }
 
   //unsubscribe from specific topics
   void unsubscribeFromTopics(List<String> topics) {
     for (var topic in topics) {
       client.unsubscribe("/kiddotrac/$topic");
-      onLogMessage('Unsubscribed from topic: $topic');
+      onLogMessage.call('Unsubscribed from topic: $topic');
     }
+  }
+
+  void _attemptReconnect() async {
+    try {
+        await client.connect();
+        if (client.connectionStatus?.state == MqttConnectionState.connected) {
+          onConnectionStatusChanged.call('Reconnected');
+          // Resubscribe to topics
+          for (var topic in subscribedTopics) {
+            client.subscribe("/kiddotrac/$topic", MqttQos.exactlyOnce);
+            onLogMessage.call(
+              'Resubscribed to topic: $topic after manual reconnection',
+            );
+          }
+        }
+      } catch (e) {
+        onLogMessage.call('Reconnection attempt failed: $e');
+      }
   }
 }

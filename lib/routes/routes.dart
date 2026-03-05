@@ -3,16 +3,23 @@ import 'package:kiddo_tracker/pages/addchildroute.dart';
 import 'package:kiddo_tracker/pages/loginscreen.dart';
 import 'package:kiddo_tracker/pages/mainscreen.dart';
 import 'package:kiddo_tracker/pages/otpscreen.dart';
+import 'package:kiddo_tracker/pages/pinscreen.dart';
 import 'package:kiddo_tracker/pages/signupscreen.dart';
+import 'package:kiddo_tracker/pages/forgetpinscreen.dart';
 import 'package:kiddo_tracker/pages/subscriptionscreen.dart';
+
+import '../pages/request_leave_screen.dart';
 
 class AppRoutes {
   static const String login = '/';
   static const String otp = '/otp';
+  static const String pin = '/pin';
+  static const String forgetPin = '/forgetpin';
   static const String signup = '/signup';
   static const String main = '/main';
   static const String subscribe = '/subscribe';
   static const String addRoute = '/addroute';
+  static const String requestLeave = '/requestLeave';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -23,13 +30,25 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => OTPScreen(mobile: mobileNumber),
         );
+      case pin:
+        return MaterialPageRoute(builder: (_) => PINScreen());
+      case forgetPin:
+        return MaterialPageRoute(builder: (_) => ForgetPINScreen());
       case signup:
-        return MaterialPageRoute(builder: (_) => const SignUpScreen());
+        final mobileNumber = settings.arguments as String;
+        return MaterialPageRoute(
+          builder: (_) => SignUpScreen(mobile: mobileNumber),
+        );
       case main:
         return MaterialPageRoute(builder: (_) => const MainScreen());
       case subscribe:
-        final childId = settings.arguments as String;
-        return MaterialPageRoute(builder: (_) => SubscriptionScreen(childid: childId,));
+        final arguments = settings.arguments as Map;
+        final already = arguments['already'];
+        final childId = arguments['childId'];
+        return MaterialPageRoute(
+          builder: (_) =>
+              SubscriptionScreen(childid: childId, already: already),
+        );
       case addRoute:
         final arguments = settings.arguments as Map;
         final childName = arguments['childName'];
@@ -37,6 +56,24 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) =>
               AddChildRoutePage(nickName: childName, stdId: childId),
+        );
+      case requestLeave:
+        final arguments = settings.arguments as Map;
+        final Map<String, dynamic>? child = arguments['child'];
+        final String? oprId = arguments['oprId'];
+        final String? routeId = arguments['routeId'];
+        final String? childId = arguments['childId'];
+        final List<String>? tspId = arguments['tspId'];
+        final String? childName = arguments['childName'];
+        return MaterialPageRoute(
+          builder: (_) => RequestLeaveScreen(
+            child: child,
+            oprId: oprId,
+            routeId: routeId,
+            childId: childId,
+            tspIds: tspId,
+            childName: childName,
+          ),
         );
       default:
         return MaterialPageRoute(
@@ -47,14 +84,16 @@ class AppRoutes {
     }
   }
 
-  static Map<String, WidgetBuilder> get routes {
-    return {
-      login: (context) => const LoginScreen(),
-      otp: (context) => OTPScreen(),
-      signup: (context) => const SignUpScreen(),
-      main: (context) => const MainScreen(),
-      subscribe: (context) => const SubscriptionScreen(),
-      addRoute: (context) => AddChildRoutePage(),
-    };
-  }
+  // static Map<String, WidgetBuilder> get routes {
+  //   return {
+  //     login: (context) => const LoginScreen(),
+  //     otp: (context) => OTPScreen(),
+  //     pin: (context) => PINScreen(),
+  //     forgetPin: (context) => ForgetPINScreen(),
+  //     signup: (context) => SignUpScreen(),
+  //     main: (context) => const MainScreen(),
+  //     subscribe: (context) => const SubscriptionScreen(),
+  //     addRoute: (context) => AddChildRoutePage(),
+  //   };
+  // }
 }

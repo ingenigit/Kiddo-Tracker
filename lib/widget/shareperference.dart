@@ -35,4 +35,69 @@ class SharedPreferenceHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString("userSessionId");
   }
+
+  static Future<void> setEarliestRouteHour(int hour) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt("earliestRouteHour", hour);
+  }
+
+  static Future<int?> getEarliestRouteHour() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt("earliestRouteHour");
+  }
+
+  static Future<void> setEarliestRouteMinute(int minute) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt("earliestRouteMinute", minute);
+  }
+
+  static Future<int?> getEarliestRouteMinute() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt("earliestRouteMinute");
+  }
+
+  // session expiry
+  // static Future<void> setSessionExpiry(DateTime value) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   await prefs.setString("sessionExpiry", value.toIso8601String());
+  // }
+
+  // static Future<DateTime?> getSessionExpiry() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final string = prefs.getString("sessionExpiry");
+  //   return string != null ? DateTime.parse(string) : null;
+  // }
+
+  static Future<void> clearAllExceptNumberAndLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("earliestRouteHour");
+    await prefs.remove("earliestRouteMinute");
+  }
+
+  static Future<void> clearUserSessionId() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("userSessionId");
+  }
+
+  // app active status
+  static Future<void> setAppActive(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("appActive", value);
+  }
+
+  static Future<bool> getAppActive() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool("appActive") ?? false;
+  }
+
+  // dark mode
+  static Future<void> setDarkMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("darkMode", value);
+  }
+
+  static Future<bool?> getDarkMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool("darkMode");
+  }
 }

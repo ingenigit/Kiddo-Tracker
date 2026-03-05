@@ -2,62 +2,350 @@ import 'package:dio/dio.dart';
 import 'apimanage.dart';
 
 class ApiService {
+  static Future<Response> verifyPIN(String mobile, String pin) async {
+    return await ApiManager().post(
+      'ktrackuserlogin/',
+      data: {'userid': mobile, 'pin': pin},
+    );
+  }
+
   static Future<Response> sendOTP(String mobile) async {
     return await ApiManager().post('ktrackuserotp/', data: {'mobile': mobile});
   }
 
   static Future<Response> verifyOTP(String mobile, String otp) async {
-    return await ApiManager().post('ktrackuserverifyotp/', data: {'mobile': mobile, 'otpval': otp});
+    return await ApiManager().post(
+      'ktrackuserverifyotp/',
+      data: {'mobile': mobile, 'otpval': otp},
+    );
+  }
+
+  static Future<Response> SignUpUser(
+    String userid,
+    String name,
+    String city,
+    String state,
+    String address,
+    String contact,
+    String email,
+    String mobile,
+    int pin,
+  ) async {
+    return await ApiManager().post(
+      'ktrackusersignup/',
+      data: {
+        'userid': userid,
+        'name': name,
+        'city': city,
+        'state': state,
+        'address': address,
+        'contact': contact,
+        'email': email,
+        'mobile': mobile,
+        'pin': pin,
+        'wards': "0",
+        'status': "0",
+      },
+    );
+  }
+
+  static Future<Response> logoutUser(String mobile, String sessionId) async {
+    return await ApiManager().post(
+      'ktrackuserlogout/',
+      data: {'userid': mobile, 'sessionid': sessionId},
+    );
   }
 
   static Future<Response> fetchUserByMobile(String mobile) async {
-    return await ApiManager().post('ktrackuserbymobile', data: {'passkey': "Usr.KdTrac4\$Dat", 'mobile': mobile});
+    return await ApiManager().post(
+      'ktrackuserbymobile',
+      data: {'passkey': "Usr.KdTrac4\$Dat", 'mobile': mobile},
+    );
   }
 
-  static Future<Response> fetchSubscriptionPlans(String userId, String sessionId) async {
-    return await ApiManager().post('ktusersubplansbyuid', data: {'userid': userId, 'sessionid': sessionId});
+  static Future<Response> forgotPasswordOtp(String mobile) async {
+    return await ApiManager().post('ktuforgopwdotp/', data: {'mobile': mobile});
   }
 
-  static Future<Response> fetchVehicleInfo(String userId, String sessionId, String vehicleId) async {
-    return await ApiManager().post('ktuvehicleinfo/', data: {'userid': userId, 'sessionid': sessionId, 'vehicle_id': vehicleId});
+  static Future<Response> forgotPassword(
+    String mobile,
+    String otp,
+    String pin,
+  ) async {
+    return await ApiManager().post(
+      'ktuserforgotpwd/',
+      data: {'mobile': mobile, 'otpval': otp, 'newpin': pin},
+    );
   }
 
-  static Future<Response> fetchOperationStatus(String userId, String oprId, String sessionId) async {
-    return await ApiManager().post('ktuoperationstatus/', data: {'userid': userId, 'oprid': oprId, 'sessionid': sessionId});
+  static Future<Response> fetchSubscriptionPlans(
+    String userId,
+    String sessionId,
+  ) async {
+    return await ApiManager().post(
+      'ktusersubplansbyuid',
+      data: {'userid': userId, 'sessionid': sessionId},
+    );
   }
 
-  static Future<Response> deleteStudentRoute(String studentId, String oprId, String sessionId, String userId) async {
-    return await ApiManager().post('ktuserstdroutedel/', data: {'student_id': studentId, 'oprid': oprId, 'sessionid': sessionId, 'userid': userId});
+  static Future<Response> fetchVehicleInfo(
+    String userId,
+    String sessionId,
+    String vehicleId,
+  ) async {
+    return await ApiManager().post(
+      'ktuvehicleinfo/',
+      data: {'userid': userId, 'sessionid': sessionId, 'vehicle_id': vehicleId},
+    );
   }
 
-  static Future<Response> addStudent(String userId, String sessionId, String name, String nickname, String school, String className, String rollNo, String gender, String age, String state) async {
-    return await ApiManager().post('ktuseraddstudent', data: {
-      'userid': userId,
-      'sessionid': sessionId,
-      'name': name,
-      'nickname': nickname,
-      'school': school,
-      'class': className,
-      'rollno': rollNo,
-      'gender': gender,
-      'age': age,
-      'state': state,
-    });
+  static Future<Response> fetchOperationStatus(
+    String userId,
+    String oprId,
+    String sessionId,
+  ) async {
+    return await ApiManager().post(
+      'ktuoperationstatus/',
+      data: {'userid': userId, 'oprid': oprId, 'sessionid': sessionId},
+    );
   }
 
-  static Future<Response> editStudent(String userId, String sessionId, String studentId, String name, String nickname, String school, String className, String rollNo, String gender, String age, String state) async {
-    return await ApiManager().post('ktuserstudentedit', data: {
-      'userid': userId,
-      'sessionid': sessionId,
-      'student_id': studentId,
-      'name': name,
-      'nickname': nickname,
-      'school': school,
-      'class': className,
-      'rollno': rollNo,
-      'gender': gender,
-      'age': age,
-      'state': state,
-    });
+  static Future<Response> fetchUserStudentList(
+    String userId,
+    String? sessionId,
+  ) async {
+    return await ApiManager().post(
+      'ktuserstudentlist/',
+      data: {'userid': userId, 'sessionid': sessionId},
+    );
+  }
+
+  static Future<Response> updateStudentRoute(
+    String userId,
+    String sessionId,
+    String childId,
+    String routeData,
+  ) async {
+    return await ApiManager().post(
+      'ktuserupdateroute',
+      data: {
+        'userid': userId,
+        'sessionid': sessionId,
+        'student_id': childId,
+        'route_info': routeData,
+      },
+    );
+  }
+
+  static Future<Response> deleteStudentRoute(
+    String studentId,
+    String oprId,
+    String sessionId,
+    String userId,
+  ) async {
+    return await ApiManager().post(
+      'ktuserstdroutedel/',
+      data: {
+        'student_id': studentId,
+        'oprid': oprId,
+        'sessionid': sessionId,
+        'userid': userId,
+      },
+    );
+  }
+
+  static Future<Response> addStudent(
+    String userId,
+    String sessionId,
+    String name,
+    String nickname,
+    String school,
+    String className,
+    String rollNo,
+    String gender,
+    String age,
+    String state,
+  ) async {
+    return await ApiManager().post(
+      'ktuseraddstudent',
+      data: {
+        'userid': userId,
+        'sessionid': sessionId,
+        'name': name,
+        'nickname': nickname,
+        'school': school,
+        'class': className,
+        'rollno': rollNo,
+        'gender': gender,
+        'age': age,
+        'state': state,
+      },
+    );
+  }
+
+  static Future<Response> editStudent(
+    String userId,
+    String sessionId,
+    String studentId,
+    String name,
+    String nickname,
+    String school,
+    String className,
+    String rollNo,
+    String gender,
+    String age,
+    String state,
+  ) async {
+    return await ApiManager().post(
+      'ktuserstudentedit',
+      data: {
+        'userid': userId,
+        'sessionid': sessionId,
+        'student_id': studentId,
+        'name': name,
+        'nickname': nickname,
+        'school': school,
+        'class': className,
+        'rollno': rollNo,
+        'gender': gender,
+        'age': age,
+        'state': state,
+      },
+    );
+  }
+
+  static Future<Response> checkSession(String userId, String sessionId) async {
+    return await ApiManager().post(
+      'ktrackusersessioncheck/',
+      data: {'userid': userId, 'sessionid': sessionId},
+    );
+  }
+
+  static Future<Response> fetchHolidays(
+    String userId,
+    String opId,
+    String routeId,
+    String sessionId,
+  ) async {
+    return await ApiManager().post(
+      'ktutsprouteoffdays/',
+      data: {
+        'userid': userId,
+        'oprid': opId,
+        'route_id': routeId,
+        'sessionid': sessionId,
+      },
+    );
+  }
+
+  static Future<Response> sendAbsentDays(
+    String startDate,
+    String endDate,
+    String tspId,
+    String studentId,
+    String sessionId,
+    String userId,
+  ) async {
+    return await ApiManager().post(
+      'ktuserstdoffdayadd/',
+      data: {
+        'userid': userId,
+        'start_date': startDate,
+        'end_date': endDate,
+        'tsp_id': tspId,
+        'student_id': studentId,
+        'sessionid': sessionId,
+      },
+    );
+  }
+
+  static Future<Response> changePin(
+    String user,
+    String session,
+    String pin1,
+    String pin2,
+  ) async {
+    return await ApiManager().post(
+      'ktuserchangepwd/',
+      data: {
+        'userid': user,
+        'oldpin': pin1,
+        'newpin': pin2,
+        'sessionid': session,
+      },
+    );
+  }
+
+  static Future<Response> getNotification(
+    String userId,
+    String sessionId,
+    String routeId,
+    String oprId,
+  ) async {
+    return await ApiManager().post(
+      'ktunoticedata/',
+      data: {
+        'userid': userId,
+        'sessionid': sessionId,
+        'route_id': routeId,
+        'oprid': oprId,
+      },
+    );
+  }
+
+  static Future<Response> getStateList() async {
+    return await ApiManager().post(
+      'statelistpub/',
+      data: {'passkey': "St3nM4Dat"},
+    );
+  }
+
+  static Future<dynamic> fetchStudentAbsentDays(
+    String userId,
+    String session,
+    String tspId,
+    String studentId,
+  ) async {
+    return await ApiManager().post(
+      'ktustdoffdays/',
+      data: {
+        'userid': userId,
+        'sessionid': session,
+        "tsp_id": tspId,
+        "student_id": studentId,
+      },
+    );
+  }
+
+static Future<Response> userSubscribeHistory(
+    String userId,
+    String sessionId,
+    String studentId,
+  ) async {
+    return await ApiManager().post(
+      'ktusersubplanhist/',
+      data: {
+        'userid': userId,
+        'sessionid': sessionId,
+        'student_id': studentId,
+      },
+    );
+  }
+
+  static Future<Response> renewUserSubscriptionPlan(
+    String userId,
+    String sessionId,
+    String studentId,
+    String planId,
+  ) async {
+    return await ApiManager().post(
+      'ktusersubplanrenew/',
+      data: {
+        'userid': userId,
+        'sessionid': sessionId,
+        'student_id': studentId,
+        'plan_id': planId,
+      },
+    );
   }
 }

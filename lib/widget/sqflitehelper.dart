@@ -24,9 +24,9 @@ class SqfliteHelper {
     String path = join(await getDatabasesPath(), 'kiddo_tracker.db');
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
-      // onUpgrade: _onUpgrade,
+      onUpgrade: _onUpgrade,
       readOnly: false,
     );
   }
@@ -46,6 +46,7 @@ class SqfliteHelper {
         mobile TEXT,
         wards INTEGER,
         status INTEGER,
+        pin TEXT,
         sessionid TEXT
       )
     ''');
@@ -80,7 +81,9 @@ class SqfliteHelper {
         route_name TEXT,
         type INTEGER,
         stop_list TEXT,
-        vehicle_id TEXT
+        vehicle_id TEXT,
+        stop_details TEXT,
+        stop_arrival_time TEXT
       )
     ''');
 
@@ -95,6 +98,8 @@ class SqfliteHelper {
       off_location TEXT,
       route_id TEXT,
       oprid TEXT,
+      message_time TEXT,
+      journey_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -114,6 +119,42 @@ class SqfliteHelper {
         userid TEXT
       )
     ''');
+
+    //notifications table
+    await db.execute('''
+      CREATE TABLE notifications(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        notice_id TEXT,
+        type INTEGER,
+        priority INTEGER,
+        title TEXT,
+        description TEXT,
+        validity DATETIME,
+        route_id TEXT,
+        is_read INTEGER DEFAULT 0
+      )
+    ''');
+
+    //absentDays table
+    await db.execute('''
+      CREATE TABLE absentDays(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT,
+        tsp_id TEXT,
+        start_date TEXT,
+        end_date TEXT,
+        reason TEXT,
+        status INTEGER,
+        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Create new table
+    }
+    if (oldVersion < 3) {}
   }
 
   //activity CURD
@@ -127,7 +168,7 @@ class SqfliteHelper {
     return await dbClient.query('activityStatus');
   }
 
-  Future<Map<String, String>> getActivityTimesForRoute(
+  Future<Map<String, Map<String, dynamic>?>> getActivityTimesForRoute(
     String routeId,
     String oprid,
     String studentId,
@@ -136,6 +177,8 @@ class SqfliteHelper {
     final String today = DateTime.now().toIso8601String().split(
       'T',
     )[0]; // Get current date in YYYY-MM-DD format
+
+    //current data with high Journey id
     final List<Map<String, dynamic>> results = await dbClient.query(
       'activityStatus',
       where:
@@ -143,39 +186,44 @@ class SqfliteHelper {
       whereArgs: [routeId, oprid, studentId, today],
       orderBy: 'created_at ASC',
     );
-    Logger().i(results);
-    String onboardTime = '_';
-    String offboardTime = '_';
-    String onLocation = '_';
-    String offLocation = '_';
+    // Logger().i(results);
 
-    // Sort results by created_at descending to get the latest
-    List<Map<String, dynamic>> sortedResults = List.from(results);
-    sortedResults.sort((a, b) => b['created_at'].compareTo(a['created_at']));
-
-    Map<String, dynamic>? latest = sortedResults.isNotEmpty
-        ? sortedResults.first
-        : null;
-
-    if (latest != null) {
-      // Check if the latest entry's status is 'onboarded'
-      if (latest['status'] == 'onboarded') {
-        onboardTime = latest['created_at'].toString();
-        onLocation = latest['on_location'];
-      }
-      // Check if the latest entry's status is 'offboarded'
-      else if (latest['status'] == 'offboarded') {
-        offboardTime = latest['created_at'].toString();
-        offLocation = latest['off_location'];
-      }
+    // Filter results to only those with journey_id not null
+    List<Map<String, dynamic>> withJourney = results
+        .where((r) => r['journey_id'] != null)
+        .toList();
+    if (withJourney.isEmpty) {
+      return {'onboard': null, 'offboard': null};
     }
 
-    return {
-      'onboardTime': onboardTime,
-      'offboardTime': offboardTime,
-      'onLocation': onLocation,
-      'offLocation': offLocation,
-    };
+    // Sort by created_at descending to get the latest journey_id
+    withJourney.sort((a, b) => b['created_at'].compareTo(a['created_at']));
+    String latestJourneyId = withJourney.first['journey_id'];
+
+    // Get all records for the latest journey_id
+    List<Map<String, dynamic>> journeyResults = results
+        .where((r) => r['journey_id'] == latestJourneyId)
+        .toList();
+
+    // Find the latest onboarded record for this journey
+    List<Map<String, dynamic>> onboarded = journeyResults
+        .where((r) => r['status'] == 'onboarded')
+        .toList();
+    onboarded.sort((a, b) => b['created_at'].compareTo(a['created_at']));
+    Map<String, dynamic>? latestOnboard = onboarded.isNotEmpty
+        ? onboarded.first
+        : null;
+
+    // Find the latest offboarded record for this journey
+    List<Map<String, dynamic>> offboarded = journeyResults
+        .where((r) => r['status'] == 'offboarded')
+        .toList();
+    offboarded.sort((a, b) => b['created_at'].compareTo(a['created_at']));
+    Map<String, dynamic>? latestOffboard = offboarded.isNotEmpty
+        ? offboarded.first
+        : null;
+
+    return {'onboard': latestOnboard, 'offboard': latestOffboard};
   }
 
   // User CRUD
@@ -201,13 +249,30 @@ class SqfliteHelper {
   }
 
   //update the child
-  Future<int> updateChild(Child child) async {
+  Future<int> updateChild(
+    String studentId,
+    String childname,
+    String nickname,
+    String school,
+    String className,
+    String rollNo,
+    int parsedAge,
+    String gender,
+  ) async {
     final dbClient = await db;
     return await dbClient.update(
       'child',
-      child.toJson(),
+      {
+        'name': childname,
+        'nickname': nickname,
+        'school': school,
+        'class_name': className,
+        'rollno': rollNo,
+        'age': parsedAge,
+        'gender': gender,
+      },
       where: 'student_id = ?',
-      whereArgs: [child.student_id],
+      whereArgs: [studentId],
     );
   }
 
@@ -221,18 +286,37 @@ class SqfliteHelper {
     );
   }
 
-  //get child tsp_id in list
-  Future<List<String>> getChildTspId() async {
+  //return array of an object{tspid, oprid, routeid} child tsp_id with route_info's oprid and route_id
+  Future<List<Map<String, dynamic>>> getChildTspId() async {
     final dbClient = await db;
     final results = await dbClient.query(
       'child',
-      columns: ['tsp_id'],
-      distinct: true,
+      columns: ['tsp_id', 'route_info'],
     );
-    return results
-        .map((e) => e['tsp_id'] as String)
-        .where((element) => element.isNotEmpty)
-        .toList();
+    List<Map<String, dynamic>> tspData = [];
+    for (var e in results) {
+      try {
+        final tspIdRaw = e['tsp_id'] as String?;
+        final routeInfoRaw = e['route_info'] as String?;
+
+        if (tspIdRaw != null && routeInfoRaw != null) {
+          final List<dynamic> tspList = jsonDecode(tspIdRaw);
+          final List<dynamic> routeList = jsonDecode(routeInfoRaw);
+          for (var tspId in tspList) {
+            var tspRoutes = routeList
+                .where(
+                  (route) => route['route_id'].toString().startsWith(tspId),
+                )
+                .toList();
+
+            tspData.add({'tsp_id': tspId, 'routes': tspRoutes});
+          }
+        }
+      } catch (e) {
+        Logger().e('Error parsing tsp_id or route_info: $e');
+      }
+    }
+    return tspData;
   }
 
   //get route_info by student_id
@@ -251,17 +335,17 @@ class SqfliteHelper {
   }
 
   //update child status
-  Future<int> updateChildStatus(String studentId, int status) async {
+  Future<int> updateSubscribeStatus(String studentId, int status) async {
     final dbClient = await db;
     return await dbClient.update(
-      'child',
+      'studentSubscriptions',
       {'status': status},
       where: 'student_id = ?',
       whereArgs: [studentId],
     );
   }
 
-  //get all routes in String array oprid base on student_id from child table
+  //oprid base on student_id from child table
   Future<List<String>> getAllRoutesByStudentId(String studentId) async {
     //if no data then it should be [] and if it has then ["", ""]
     //take the oprid from child's route_info
@@ -279,7 +363,7 @@ class SqfliteHelper {
               ),
             )
             .toList();
-        return routeInfos.map((route) => route.oprId).toList();
+        return routeInfos.map((route) => route.oprId.toString()).toList();
       }
     } catch (e) {
       // If parsing fails, return empty list
@@ -302,6 +386,205 @@ class SqfliteHelper {
     );
   }
 
+  //update only school_location and start_time in route_info of child base on tsp_id and route_id
+  Future<void> updateChildRouteInfo(
+    String studentId,
+    String tspId,
+    String routeId,
+    String startTime,
+    String schoolLocation,
+  ) async {
+    try {
+      final dbClient = await db;
+      // First, get the current child data
+      final results = await dbClient.query(
+        'child',
+        where: 'student_id = ?',
+        whereArgs: [studentId],
+      );
+      if (results.isEmpty) {
+        Logger().w('No child found with student_id: $studentId');
+        return;
+      }
+      final childData = results.first;
+      final tspIdRaw = childData['tsp_id'] as String?;
+      final routeInfoRaw = childData['route_info'] as String?;
+      if (tspIdRaw == null || routeInfoRaw == null) {
+        Logger().w('tsp_id or route_info is null for student_id: $studentId');
+        return;
+      }
+      // Check if tspId is in tsp_id list
+      final List<dynamic> tspList = jsonDecode(tspIdRaw);
+      if (!tspList.contains(tspId)) {
+        Logger().w(
+          'tspId $tspId not found in tsp_id for student_id: $studentId',
+        );
+        return;
+      }
+      // Decode route_info
+      final List<dynamic> routeList = jsonDecode(routeInfoRaw);
+      // Find and update the route
+      bool updated = false;
+      for (var route in routeList) {
+        if (route['route_id'] == routeId) {
+          route['start_time'] = startTime;
+          route['school_location'] = schoolLocation;
+          updated = true;
+          break;
+        }
+      }
+      if (!updated) {
+        Logger().w('Route with route_id $routeId not found in route_info');
+        return;
+      }
+      // Encode back to JSON
+      final updatedRouteInfo = jsonEncode(routeList);
+      // Update the database
+      final affectedRows = await dbClient.update(
+        'child',
+        {'route_info': updatedRouteInfo},
+        where: 'student_id = ?',
+        whereArgs: [studentId],
+      );
+      if (affectedRows > 0) {
+        Logger().i('Route info updated successfully.');
+      } else {
+        Logger().w('No rows were updated.');
+      }
+    } catch (e) {
+      Logger().e('Error updating route info: $e');
+    }
+  }
+
+  //update tsp_id for child
+  Future<int> updateChildTspId(String studentId, String tspId) async {
+    final dbClient = await db;
+    // First, get the current child data
+    final results = await dbClient.query(
+      'child',
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+    );
+    if (results.isEmpty) {
+      Logger().w('No child found with student_id: $studentId');
+      return 0;
+    }
+    final childData = results.first;
+    Logger().d("sdlkfdkj $childData");
+    final tspIdRaw = childData['tsp_id'] as String?;
+    Logger().d("sdlkfdkj $tspIdRaw");
+    List<String> tspList = [];
+    if (tspIdRaw != null && tspIdRaw.isNotEmpty) {
+      try {
+        tspList = List<String>.from(jsonDecode(tspIdRaw));
+      } catch (e) {
+        Logger().e('Error decoding tsp_id: $e');
+      }
+    }
+    Logger().d("sdlkfdkj $tspList");
+    // Add tspId if not already present
+    if (!tspList.contains(tspId)) {
+      tspList.add(tspId);
+    }
+    Logger().d("sdlkfdkj $tspList");
+    // Encode back to JSON
+    final updatedTspId = jsonEncode(tspList);
+    Logger().d("sdlkfdkj $updatedTspId");
+    // Update the database
+    return await dbClient.update(
+      'child',
+      {'tsp_id': updatedTspId},
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+    );
+  }
+
+  //update only stopage in route_info of child base on student_id and opr_id
+  Future<void> updateChildRouteStopage(
+    String childId,
+    String routeId,
+    Map<String, String> routeData,
+  ) async {
+    Logger().i(
+      "update the stopages: $childId $routeId ${routeData.toString()}",
+    );
+    try {
+      final dbClient = await db;
+      // First, get the current child data
+      final results = await dbClient.query(
+        'child',
+        where: 'student_id = ?',
+        whereArgs: [childId],
+      );
+      if (results.isEmpty) {
+        Logger().w('No child found with student_id: $childId');
+        return;
+      }
+      final childData = results.first;
+      final routeInfoRaw = childData['route_info'] as String?;
+      Logger().i("sqlfite: $routeInfoRaw");
+      if (routeInfoRaw == null) {
+        Logger().w('route_info is null for student_id: $childId');
+        return;
+      }
+      // Decode route_info
+      final List<dynamic> routeList = jsonDecode(routeInfoRaw);
+      // Find the old route and log details
+      Map<String, dynamic>? oldRoute;
+      for (var route in routeList) {
+        if (route['route_id'] == routeId) {
+          oldRoute = Map<String, dynamic>.from(route);
+          Logger().i("Old route details: $oldRoute");
+          break;
+        }
+      }
+      // Find and update the route
+      bool updated = false;
+      for (var route in routeList) {
+        if (route['route_id'] == routeId) {
+          route['stop_id'] = routeData['stop_id'];
+          route['stop_name'] = routeData['stop_name'];
+          route['location'] = routeData['location'];
+          route['stop_arrival_time'] = routeData['stop_arrival_time'];
+          updated = true;
+          break;
+        }
+      }
+      if (updated) {
+        // Find the updated route and log details
+        Map<String, dynamic>? updatedRoute;
+        for (var route in routeList) {
+          if (route['route_id'] == routeId) {
+            updatedRoute = Map<String, dynamic>.from(route);
+            Logger().i("Updated route details: $updatedRoute");
+            break;
+          }
+        }
+      }
+      if (!updated) {
+        Logger().w('Route with route_id $routeId not found in route_info');
+        return;
+      }
+      // Encode back to JSON
+      final updatedRouteInfo = jsonEncode(routeList);
+      // Update the database
+      final affectedRows = await dbClient.update(
+        'child',
+        {'route_info': updatedRouteInfo},
+        where: 'student_id = ?',
+        whereArgs: [childId],
+      );
+      if (affectedRows > 0) {
+        Logger().i('Route stopage updated successfully.');
+        Logger().d('Stopage updated successfully in local database.');
+      } else {
+        Logger().w('No rows were updated.');
+      }
+    } catch (e) {
+      Logger().e('Error updating route stopage: $e');
+    }
+  }
+
   //delete the single route from route_info of child base on student_id and opr_id
   Future<int> deleteRouteInfoByStudentIdAndOprId(
     String studentId,
@@ -322,12 +605,14 @@ class SqfliteHelper {
               ),
             )
             .toList();
+        Logger().i(routeInfos);
         // Remove the route with matching oprId
-        routeInfos.removeWhere((route) => route.oprId == oprId);
+        routeInfos.removeWhere((route) => route.oprId == int.parse(oprId));
         // Encode back to JSON string
         final updatedRouteInfoStr = jsonEncode(
           routeInfos.map((e) => e.toJson()).toList(),
         );
+        Logger().i(updatedRouteInfoStr);
         // Update the child table
         return await updateRouteInfoByStudentId(studentId, updatedRouteInfoStr);
       }
@@ -343,6 +628,34 @@ class SqfliteHelper {
     final dbClient = await db;
     dbClient.close();
     _db = null;
+  }
+
+  //absentDays insert
+  Future<void> insertAbsentDay(
+    String studentId,
+    String startDate,
+    String endDate,
+    String tspId,
+  ) async {
+    final dbClient = await db;
+    await dbClient.insert('absentDays', {
+      'student_id': studentId,
+      'start_date': startDate,
+      'end_date': endDate,
+      'tsp_id': tspId,
+    });
+  }
+
+  //get absentDays by studentId
+  Future<List<Map<String, dynamic>>> getAbsentDaysByStudentId(
+    String studentId,
+  ) async {
+    final dbClient = await db;
+    return await dbClient.query(
+      'absentDays',
+      where: 'student_id = ?',
+      whereArgs: [studentId],
+    );
   }
 
   // studentSubscriptions CRUD
@@ -383,23 +696,49 @@ class SqfliteHelper {
       client.execute('DELETE FROM activityStatus;');
       client.execute('DELETE FROM studentSubscriptions;');
       client.execute('DELETE FROM routes;');
+      client.execute('DELETE FROM notifications;');
     });
   }
 
   //insert route
-  void insertRoute(item, item2, item3, item4, item5, item6, item7) {
-    //insert route into routes table
-    db.then((client) {
-      client.insert('routes', {
-        'oprid': item,
-        'route_id': item2,
-        'timing': item3,
-        'vehicle_id': item4,
-        'route_name': item5,
-        'type': item6,
-        'stop_list': item7,
+  Future<void> insertRoute(
+    int oprid,
+    String routeId,
+    String timing,
+    String vehicleId,
+    String routeName,
+    int type,
+    String stopArrivalTime,
+    String stopList,
+    String stopDetails,
+  ) async {
+    try {
+      final client = await db;
+      await client.insert('routes', {
+        'oprid': oprid,
+        'route_id': routeId,
+        'timing': timing,
+        'vehicle_id': vehicleId,
+        'route_name': routeName,
+        'type': type,
+        'stop_arrival_time': stopArrivalTime,
+        'stop_list': stopList,
+        'stop_details': stopDetails,
       });
-    });
+    } catch (e) {
+      Logger().e('Error inserting route into DB: $e');
+    }
+  }
+
+  //check if route exists by oprid and route_id
+  Future<bool> routeExists(int oprid, String routeId) async {
+    final dbClient = await db;
+    final results = await dbClient.query(
+      'routes',
+      where: 'oprid = ? AND route_id = ?',
+      whereArgs: [oprid, routeId],
+    );
+    return results.isNotEmpty;
   }
 
   //get all data from routes table
@@ -420,5 +759,161 @@ class SqfliteHelper {
       where: 'oprid = ? AND route_id = ?',
       whereArgs: [oprId, routeId],
     );
+  }
+
+  // get stop list name and location from route base on oprid and route_id
+  Future<Map<String, dynamic>> getStopDetailsByOprIdAndRouteId(
+    String oprId,
+    String routeId,
+  ) async {
+    final dbdata = await getStopListByOprIdAndRouteId(oprId, routeId);
+    Logger().i(dbdata);
+    //from dbdata get stop_list and selected
+    if (dbdata.isNotEmpty) {
+      final stopListStr = dbdata.first['stop_list'] as String?;
+      return {'stopListStr': stopListStr};
+    }
+    return {'stopListStr': null};
+  }
+
+  //notification
+  Future<void> insertNotification(Map<String, Object> map) async {
+    final dbClient = await db;
+    await dbClient.insert('notifications', map);
+  }
+
+  Future<List<Map<String, Object?>>> getNotifications() async {
+    final dbClient = await db;
+    return await dbClient.query(
+      'notifications',
+      orderBy: 'priority DESC, validity DESC',
+    );
+  }
+
+  Future<int> updateNotificationIsRead(int id, int isRead) async {
+    final dbClient = await db;
+    return await dbClient.update(
+      'notifications',
+      {'is_read': isRead},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<bool> getNotificationByNoticeId(String string) async {
+    final dbClient = await db;
+    final results = await dbClient.query(
+      'notifications',
+      where: 'notice_id = ?',
+      whereArgs: [string],
+    );
+    return results.isNotEmpty;
+  }
+
+  Future<void> clearNotifications() async {
+    final dbClient = await db;
+    //clear the data from notifications table
+    await dbClient.execute('DELETE FROM notifications;');
+  }
+
+  Future<int> getUnreadNotificationCount() async {
+    final dbClient = await db;
+    final result = await dbClient.rawQuery(
+      'SELECT COUNT(*) as count FROM notifications WHERE is_read = 0;',
+    );
+    int count = Sqflite.firstIntValue(result) ?? 0;
+    return count;
+  }
+
+  Future<List<Map<String, Object?>>> getUnreadNotifications() async {
+    final dbClient = await db;
+    return await dbClient.query(
+      'notifications',
+      where: 'is_read = ?',
+      whereArgs: [0],
+      orderBy: 'priority DESC, validity DESC',
+    );
+  }
+
+  Future<void> updateRouteForStudent(
+    String childId,
+    RouteInfo updatedRoute,
+  ) async {
+    final dbClient = await db;
+    // First, get the current child data
+    final results = await dbClient.query(
+      'child',
+      where: 'student_id = ?',
+      whereArgs: [childId],
+    );
+    if (results.isEmpty) {
+      Logger().w('No child found with student_id: $childId');
+      return;
+    }
+    final childData = results.first;
+    final routeInfoRaw = childData['route_info'] as String?;
+    if (routeInfoRaw == null) {
+      Logger().w('route_info is null for student_id: $childId');
+      return;
+    }
+    // Decode route_info
+    final List<dynamic> routeList = jsonDecode(routeInfoRaw);
+    // Find and update the route
+    bool updated = false;
+    for (var route in routeList) {
+      if (route['route_id'] == updatedRoute.routeId) {
+        route['start_time'] = updatedRoute.startTime;
+        route['location'] = updatedRoute.stopLocation;
+        route['stop_name'] = updatedRoute.stopName;
+        route['stop_id'] = updatedRoute.stopId;
+        updated = true;
+        break;
+      }
+    }
+    if (!updated) {
+      Logger().w(
+        'Route with route_id ${updatedRoute.routeId} not found in route_info',
+      );
+      return;
+    }
+    // Encode back to JSON
+    final updatedRouteInfo = jsonEncode(routeList);
+    // Update the database
+    final affectedRows = await dbClient.update(
+      'child',
+      {'route_info': updatedRouteInfo},
+      where: 'student_id = ?',
+      whereArgs: [childId],
+    );
+    if (affectedRows > 0) {
+      Logger().i('Route info updated successfully.');
+    } else {
+      Logger().w('No rows were updated.');
+    }
+  }
+
+  Future<void> updateTagId(String string, String string2) async {
+    //update the tag_id in child table base on student_id
+    final dbClient = await db;
+    await dbClient.update(
+      'child',
+      {'tag_id': string},
+      where: 'student_id = ?',
+      whereArgs: [string2],
+    );
+  }
+
+  Future<String?> getRouteNameById(String string) async {
+    final dbClient = await db;
+    final results = await dbClient.query(
+      'routes',
+      columns: ['route_name'],
+      where: 'route_id = ?',
+      whereArgs: [string],
+    );
+    if (results.isNotEmpty) {
+      return results.first['route_name'] as String?;
+    }
+    return null;
   }
 }
